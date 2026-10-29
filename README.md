@@ -68,6 +68,22 @@ package.json        快捷命令（npm run build / check / serve / import）
 
 想改机器人的解析规则，改 `scripts/issue-parse.js`；投稿被拒时的提示语也在里面，同学能直接看到「哪一栏填错了」。
 
+### 批量投稿（一次多题，可混排四种题型）
+
+同学在 `batch.html`（线上 `/batch.html`）里把题目整段粘进去，页面实时解析成题目卡片 + 报错提示，
+确认后把同一段文字贴到「批量提交」Issue 表单。维护者打 `approved` 后一次入库。
+
+```bash
+# 本地也能跑同一套解析（与网页共用 assets/parse-lib.js）
+node scripts/parse-batch.js --text-file 题目.txt --course sensor --check
+node scripts/parse-batch.js --body-file issue.md --issue-number 33 --out .tmp/batch.json
+node scripts/add-question.js --json .tmp/batch.json     # 支持 { question } 与 { questions: [...] }
+```
+
+规则：题型标记 `【选择】/【填空】/【名词】/【计算】`（也认 `[选择]`、`## 选择`、`一、选择题`），
+其后每题以「答案：」收尾；同一题型可连写多题。**部分成功也入库**，跳过的题会在 Issue 回帖里逐条说明原因。
+单次建议 ≤50 题，`check-data.js` 仍会做结构与隐私校验。
+
 ### 仓库配置（已完成，换仓库时照抄）
 
 当前仓库已经配好，下面是等价的命令行版本，换账号/换仓库时可以复用：

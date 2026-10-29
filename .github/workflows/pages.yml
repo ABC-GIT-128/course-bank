@@ -35,7 +35,7 @@ jobs:
           mkdir -p .build
           # 只发布运行时需要的文件；脚本、授权凭证、说明文档不进产物
           # PWA：manifest + service worker 必须在根目录
-          cp -r index.html quiz.html about.html assets data templates .build/
+          cp -r index.html quiz.html about.html batch.html assets data templates .build/
           cp manifest.webmanifest sw.js .build/
           # 课程短地址：/sensor/ —— 由 build-index.js 生成，只带标记的目录才拷
           for d in */; do

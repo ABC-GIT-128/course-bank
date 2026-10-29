@@ -1,0 +1,186 @@
+/* 批量整理页：粘贴 → 实时解析 → 预览 + 报错
+ * 解析规则来自 assets/parse-lib.js（与入库脚本同一份，保证预览和 CI 结果一致）
+ */
+(function () {
+  const $ = s => document.querySelector(s);
+  const elPaste = $('#paste');
+  const elStat = $('#stat');
+  const elErrs = $('#errs');
+  const elList = $('#list');
+  const elHint = $('#hint');
+
+  const TYPE_CLASS = { choice: 't-choice', fill: 't-fill', term: 't-term', calc: 't-calc' };
+  const SUBMIT_URL = 'https://github.com/ABC-GIT-128/course-bank/issues/new?template=batch.yml';
+
+  const HINT = `粘贴格式（题型标记 + 答案/解析/出处 各占一行）：
+
+【选择】1. 题干（  ）
+A. 选项一      B. 选项二    ← 每行一个
+答案：A
+解析：为什么选它、其它错在哪
+出处：第 3 章 复习要点
+
+【填空】2. 题干 ＿＿＿ ＿＿＿
+答案：灵敏度 | 量程        ← 多个空用 | 分隔
+
+【名词】3. 术语
+答案：参考答案
+关键词：要点一|要点二|要点三   ← 判分用，至少 3 组
+
+【计算】4. 题干
+答案：20 V
+解析：第一步 | 第二步       ← 用 | 或换行分步
+
+小贴士：同一种题型可以连着写多道题，题号起新行即可；「出处」里写「第X章」会自动识别章节。`;
+
+  const DEMO = `【选择】
+1. 差动变压器采用差动结构的主要目的是（　）。
+A. 提高灵敏度并减小非线性误差
+B. 降低对电源的要求
+C. 减小体积
+D. 便于标定
+答案：A
+解析：两线圈输出相减，非线性误差相互抵消，同时灵敏度约提高一倍。
+出处：第4章 4.3 差动变压器
+
+2. 下列传感器中属于有源（发电型）传感器的是（　）。
+A. 电阻应变式
+B. 压电式
+C. 电容式
+D. 电感式
+答案：B
+解析：压电式靠压电效应直接产生电荷，不需要外加激励电源；其余三种都属能量控制型。
+出处：第1章 1.2 传感器的分类
+
+【填空】
+3. 应变片的主要参数有 ＿＿＿、＿＿＿。
+答案：灵敏度 | 灵敏系数
+解析：灵敏度以灵敏系数 K 表示，此外还有允许电流、横向效应等。
+出处：第3章 3.1 电阻应变片
+
+【名词】
+4. 灵敏度
+答案：输出增量与相应输入增量之比，反映传感器对被测量变化的敏感程度。
+关键词：输出增量|输入增量|比值
+解析：对线性传感器 S=Δy/Δx，非线性时用 dy/dx 表示。
+出处：第2章 2.1 静态特性
+
+【计算】
+5. 某电阻 R=10Ω，通过电流 I=2A，求其两端电压 U。
+答案：20 V
+解析：由欧姆定律 U=IR|U=2×10=20V
+出处：第1章 1.1 基本概念`;
+
+  let timer = null;
+
+  function toast(msg) {
+    const t = $('#btoast');
+    t.textContent = msg;
+    t.classList.add('on');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => t.classList.remove('on'), 1600);
+  }
+
+  function answerLine(q) {
+    if (q.type === 'choice') {
+      const opt = (q.opts || [])[q.ans] || '';
+      return '答案：' + 'ABCD'[q.ans] + '．' + opt;
+    }
+    if (q.type === 'fill') return '答案：' + q.blanks.map(b => b[0]).join(' / ');
+    if (q.type === 'term') return '要点：' + q.kw.map(g => g[0]).join('、');
+    return '答案：' + q.ansText + (q.unit ? '（单位 ' + q.unit + '，容差 ' + Math.round((q.tol || .03) * 100) + '%）' : '');
+  }
+
+  function render() {
+    const text = elPaste.value.trim();
+    if (!text) {
+      elStat.innerHTML = '<span class="chip">等待粘贴…</span>';
+      elErrs.innerHTML = '';
+      elList.innerHTML = '<div class="bempty">把题目粘到上面，这里会实时预览</div>';
+      return;
+    }
+
+    const r = window.OCParse.parseBatch(text, { idPrefix: 'p' });
+    const s = r.stats;
+    const byType = s.byType || {};
+    elStat.innerHTML =
+      '<span class="chip">识别 <b>' + s.total + '</b> 题</span>' +
+      (byType.choice ? '<span class="chip">选择 <b>' + byType.choice + '</b></span>' : '') +
+      (byType.fill ? '<span class="chip">填空 <b>' + byType.fill + '</b></span>' : '') +
+      (byType.term ? '<span class="chip">名词 <b>' + byType.term + '</b></span>' : '') +
+      (byType.calc ? '<span class="chip">计算 <b>' + byType.calc + '</b></span>' : '') +
+      '<span class="chip ' + (s.skipped ? 'bad' : 'ok') + '">' +
+        (s.skipped ? '跳过 ' + s.skipped + ' 题' : '全部可用') + '</span>';
+
+    if (r.errors.length) {
+      elErrs.innerHTML = '<div class="berr"><h4>下面这些题还不能入库，改一下就能识别：</h4><ul>' +
+        r.errors.map(e => '<li>' + e.msg.join('<br>') +
+          (e.stem ? '<br><span style="color:#9ca3af">原文：' + escapeHtml(e.stem) + '…</span>' : '') +
+          '</li>').join('') +
+        '</ul></div>';
+    } else {
+      elErrs.innerHTML = '';
+    }
+
+    elList.innerHTML = r.questions.map((q, i) =>
+      '<div class="bitem">' +
+        '<div class="bh"><span class="no">' + (i + 1) + '</span>' +
+          '<span class="t ' + (TYPE_CLASS[q.type] || '') + '">' + r.typeName[q.type] + '</span>' +
+          '<span class="no">第' + q.ch + '章</span></div>' +
+        '<div class="stem">' + escapeHtml(q.q) + '</div>' +
+        '<div class="ans"><i>' + escapeHtml(answerLine(q)) + '</i></div>' +
+        (q.warn && q.warn.length ? '<div class="warn">' + q.warn.map(escapeHtml).join('；') + '</div>' : '') +
+      '</div>'
+    ).join('') || '<div class="bempty">还没有识别出题目</div>';
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  elPaste.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(render, 160);
+  });
+
+  $('#btnDemo').addEventListener('click', () => {
+    elPaste.value = DEMO;
+    render();
+    elPaste.focus();
+    toast('已填入示例，改成你的题目即可');
+  });
+
+  $('#btnClear').addEventListener('click', () => {
+    elPaste.value = '';
+    render();
+    elPaste.focus();
+  });
+
+  $('#btnCopy').addEventListener('click', async () => {
+    if (!elPaste.value.trim()) { toast('还没有内容'); return; }
+    try {
+      await navigator.clipboard.writeText(elPaste.value);
+      toast('已复制，粘到投稿表单即可');
+    } catch (e) {
+      elPaste.select();
+      document.execCommand && document.execCommand('copy');
+      toast('已复制');
+    }
+  });
+
+  $('#btnSubmit').addEventListener('click', () => {
+    if (!elPaste.value.trim()) { toast('先把题目粘进来'); return; }
+    const r = window.OCParse.parseBatch(elPaste.value, { idPrefix: 'p' });
+    if (r.errors.length) {
+      toast('还有 ' + r.errors.length + ' 题格式不对，先改一下');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    window.open(SUBMIT_URL, '_blank', 'noopener');
+  });
+
+  elHint.textContent = HINT;
+  render();
+})();

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>批量整理题目 · OpenCourse</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#4f46e5">
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  body{padding:0 0 60px}
+  .bwrap{max-width:900px;margin:0 auto;padding:0 18px}
+  .bhead{padding:26px 0 14px}
+  .bhead h1{font-size:22px;margin:0 0 8px}
+  .bhead p{margin:0;color:var(--sub);font-size:13.5px;line-height:1.75}
+  .bpanel{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:14px}
+  .btools{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+  .btools button{border:1px solid var(--line);background:#f7f8fb;color:#4b5563;border-radius:9px;
+    padding:7px 12px;font-size:12.5px;cursor:pointer;font-family:inherit}
+  .btools button:hover{background:#eef0f6}
+  .btools .primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .btools .primary:hover{filter:brightness(1.05)}
+  #paste{width:100%;min-height:260px;resize:vertical;border:1px solid var(--line);border-radius:12px;
+    padding:12px 13px;font-size:13.5px;line-height:1.8;font-family:ui-monospace,Menlo,Consolas,"Courier New",monospace;
+    box-sizing:border-box;outline:none;background:#fcfcfe;color:var(--ink)}
+  #paste:focus{border-color:#b9c0f5;background:#fff}
+  .bstat{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 4px;font-size:12.5px;color:#4b5563}
+  .bstat b{color:#1b2130}
+  .bstat .ok{color:#15803d}
+  .bstat .bad{color:#dc2626}
+  .bstat .chip{background:#f1f3f8;border-radius:99px;padding:3px 10px}
+  .berr{background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:11px 13px;margin:12px 0}
+  .berr h4{margin:0 0 6px;font-size:13px;color:#b91c1c}
+  .berr li{font-size:12.8px;color:#7f1d1d;line-height:1.75;margin-left:-6px}
+  .berr ul{margin:0;padding-left:18px}
+  .blist{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+  .bitem{background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px 13px}
+  .bitem .bh{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+  .bitem .no{font-size:11.5px;color:#8a93a6;font-variant-numeric:tabular-nums}
+  .bitem .t{font-size:10.5px;border-radius:5px;padding:1px 7px;font-weight:700}
+  .t-choice{background:#eef2ff;color:#4338ca}
+  .t-fill{background:#ecfdf5;color:#047857}
+  .t-term{background:#fff7ed;color:#c2410c}
+  .t-calc{background:#eff6ff;color:#1d4ed8}
+  .bitem .stem{font-size:13.5px;line-height:1.75;color:#1b2130;white-space:pre-wrap}
+  .bitem .ans{font-size:12.5px;color:#15803d;margin-top:6px;line-height:1.7}
+  .bitem .ans i{font-style:normal;color:#6b7280}
+  .bitem .warn{font-size:12px;color:#b45309;margin-top:5px}
+  .bempty{text-align:center;color:#98a0af;font-size:13px;padding:26px 0}
+  .bhint{font-size:12.5px;color:#6b7280;line-height:1.8;margin-top:14px;background:#f7f8fb;
+    border:1px dashed #dde2ec;border-radius:12px;padding:12px 14px;white-space:pre-wrap;
+    font-family:ui-monospace,Menlo,Consolas,monospace;overflow-x:auto}
+  .btoast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);opacity:0;
+    background:#1b2130;color:#fff;font-size:13px;padding:9px 16px;border-radius:99px;
+    transition:.22s;pointer-events:none;z-index:99}
+  .btoast.on{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body class="home">
+
+<div class="topbar">
+  <div class="topin">
+    <a class="logo" href="index.html">Open<span>Course</span></a>
+    <div class="navlinks">
+      <a href="index.html">全部课程</a>
+      <a href="about.html#contribute">投稿说明</a>
+    </div>
+  </div>
+</div>
+
+<main class="bwrap">
+  <div class="bhead">
+    <h1>批量整理题目</h1>
+    <p>把整理好的题目整段粘进来，这里会实时检查格式并预览。确认无误后复制原文，到投稿表单里提交。<b>不需要你会写代码。</b></p>
+  </div>
+
+  <div class="bpanel">
+    <div class="btools">
+      <button type="button" class="primary" id="btnDemo">填入示例</button>
+      <button type="button" id="btnClear">清空</button>
+      <button type="button" id="btnCopy">复制原文</button>
+      <button type="button" id="btnSubmit">去投稿 →</button>
+    </div>
+    <textarea id="paste" spellcheck="false" placeholder="【选择】1. 题干（ ）
+A. 选项一
+B. 选项二
+答案：A
+解析：……
+出处：第3章
+
+【填空】2. …… ＿＿＿ ……"></textarea>
+
+    <div class="bstat" id="stat"><span class="chip">等待粘贴…</span></div>
+    <div id="errs"></div>
+    <div class="blist" id="list"></div>
+  </div>
+
+  <div class="bhint" id="hint"></div>
+</main>
+
+<div class="btoast" id="btoast">已复制</div>
+
+<script src="assets/parse-lib.js"></script>
+<script src="assets/batch.js"></script>
+</body>
+</html>
