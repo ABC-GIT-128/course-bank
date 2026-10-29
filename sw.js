@@ -6,7 +6,7 @@
  *
  * 改版本号即可让所有客户端下次访问时换新缓存。
  */
-const VERSION = 'oc-v1';
+const VERSION = 'oc-v2';
 const CACHE = VERSION;
 
 /* 首屏必需文件：装好之后离线也能进站 */
@@ -63,7 +63,22 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  /* 静态资源：缓存优先 + 后台更新 */
+  /* 课程数据（courses.js / 各课程.js）：网络优先
+   * 这些文件很小、改动频繁，若用缓存优先，加了新课程后会有一段时间看不到。 */
+  if (/\/data\/[^/]+\.js$/.test(url.pathname)) {
+    e.respondWith(
+      fetch(req)
+        .then(res => {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(req, copy));
+          return res;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  /* 其它静态资源：缓存优先 + 后台更新 */
   e.respondWith(
     caches.match(req).then(hit => {
       const fresh = fetch(req)

@@ -7,6 +7,17 @@
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('sw.js').catch(function () { /* 静默失败 */ });
     });
+
+    /* 新版本接管时自动刷新一次，避免「明明更新了却还看到旧内容」
+     * 用 sessionStorage 防抖，避免刷新循环 */
+    var reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (reloading) return;
+      if (sessionStorage.getItem('oc_sw_reloaded') === '1') return;
+      reloading = true;
+      sessionStorage.setItem('oc_sw_reloaded', '1');
+      location.reload();
+    });
   }
 
   /* ---------- 安装提示（仅 Android Chrome 等支持 beforeinstallprompt 的浏览器） ---------- */
