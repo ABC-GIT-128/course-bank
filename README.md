@@ -231,7 +231,13 @@ node scripts/admin.js hide-course sensor --reason "版权方要求"
 node scripts/admin.js show-course sensor
 node scripts/admin.js archive sensor                # 手动归档
 node scripts/admin.js log                           # 查看全部下架/归档记录
+
+# 物理删除（不可恢复，慎用）
+node scripts/admin.js purge-q c01 --course sensor --yes   # 删掉一道题（会重写数据文件）
+node scripts/admin.js purge sensor --yes                  # 删掉整门课（连短地址目录一起）
 ```
+
+`purge` / `purge-q` 不加 `--yes` 时只打印影响范围，不会动手。
 
 状态全部写在 `data/_status.js`（与题库内容分离），站点加载时过滤，**刷新即生效**。
 提交并部署后，被下架的题目/课程不再出现在任何页面，但数据保留，可随时恢复。
