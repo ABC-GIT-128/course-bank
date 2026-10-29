@@ -39,10 +39,10 @@ window.OC_COURSES = [
       "9": "光电式",
       "10": "辐射与波式"
     },
-    "count": 268,
+    "count": 269,
     "hidden": 0,
     "tags": {
-      "choice": 120,
+      "choice": 121,
       "fill": 82,
       "term": 42,
       "calc": 21,
