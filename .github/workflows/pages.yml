@@ -1,0 +1,52 @@
+name: 部署到 GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # 部署前再校验一次：宁可这次不发布，也不要把坏数据推上线
+      - name: 校验数据
+        run: |
+          node scripts/build-index.js
+          node scripts/check-data.js
+
+      - name: 构建静态站点
+        run: |
+          mkdir -p .build
+          cp -r index.html quiz.html about.html assets data .build/
+          # 授权凭证与脚本不进产物
+          rm -f .build/data/_status.js.bak
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

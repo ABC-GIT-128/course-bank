@@ -1,0 +1,32 @@
+name: 题目纠错
+description: 答案有误、解析不清、题干有问题
+title: "[纠错] "
+labels: ["bug", "content"]
+body:
+  - type: input
+    id: qid
+    attributes:
+      label: 题目编号
+      description: 卡片左上角的 Q 编号，或数据文件里的 id（如 m12）
+      placeholder: m12
+    validations:
+      required: true
+  - type: input
+    id: course
+    attributes:
+      label: 课程
+      placeholder: 传感器与检测技术
+    validations:
+      required: true
+  - type: textarea
+    id: issue
+    attributes:
+      label: 问题描述
+      placeholder: 正确答案应为 C，因为 …
+    validations:
+      required: true
+  - type: textarea
+    id: basis
+    attributes:
+      label: 依据
+      description: 教材页码、课件页码或原理解释

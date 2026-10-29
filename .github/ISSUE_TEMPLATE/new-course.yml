@@ -1,0 +1,44 @@
+name: 新增课程
+description: 推荐一门课，或提供整理好的课程资料
+title: "[课程] "
+labels: ["contribution", "course"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: 课程名称
+      placeholder: 例如 电路分析基础
+    validations:
+      required: true
+  - type: input
+    id: meta
+    attributes:
+      label: 学院 / 专业 / 学期
+      placeholder: 例如 自动化学院 · 2026 秋
+  - type: textarea
+    id: chapters
+    attributes:
+      label: 章节结构
+      placeholder: 第1章 电路模型和电路定律 …
+    validations:
+      required: true
+  - type: dropdown
+    id: consent
+    attributes:
+      label: 资料来源是否已获老师同意公开？
+      options:
+        - 已获同意（可提供凭证）
+        - 尚未询问
+        - 不确定，只提交我自己整理的题目
+    validations:
+      required: true
+  - type: textarea
+    id: materials
+    attributes:
+      label: 你手上有哪些材料
+      description: 复习要点 / 课堂 PPT / 往年题 / 笔记 —— 只描述，不要直接贴原文
+  - type: textarea
+    id: help
+    attributes:
+      label: 你能提供什么帮助
+      placeholder: 例如 我可以整理前 5 章的题目

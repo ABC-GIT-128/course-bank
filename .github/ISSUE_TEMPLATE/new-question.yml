@@ -1,0 +1,119 @@
+name: 新增题目
+description: 提交一道题（题干、答案、解析、出处）。提交后由维护者审核，通过即自动合入。
+title: "[题目] "
+labels: ["contribution", "question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢贡献！提交前请确认：内容是**你原创或已获授权**的，且不含他人课件原文、不含学生个人信息。
+
+        审核通过后会自动生成一条 PR 并署上你的名字，**不需要你会写代码**。
+
+  - type: dropdown
+    id: course
+    attributes:
+      label: 所属课程
+      options:
+        - 传感器与检测技术（sensor）
+        - 其它（请在下一项填写课程 ID）
+    validations:
+      required: true
+
+  - type: input
+    id: course_id
+    attributes:
+      label: 课程 ID（仅当上面选「其它」时填写）
+      description: 由维护者提供，例如 circuit。留空则视为投稿到上面选中的课程。
+      placeholder: circuit
+
+  - type: input
+    id: chapter
+    attributes:
+      label: 章节
+      description: 写章节号即可，例如「第 5 章」或直接写「5」
+      placeholder: 第 5 章 电容式传感器
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: 题型
+      options: [单项选择, 填空题, 名词解释, 计算题]
+    validations:
+      required: true
+
+  - type: textarea
+    id: body
+    attributes:
+      label: 题干
+      description: 填空题请用 ＿＿＿（三个全角下划线）表示一个空位，有几个空就写几处
+      placeholder: 电容式传感器可分为 ＿＿＿、＿＿＿ 和变介质三种类型。
+    validations:
+      required: true
+
+  - type: textarea
+    id: options
+    attributes:
+      label: 选项（选择题填）
+      description: 每行一个，写成「A. 内容」；其它题型留空
+      placeholder: |
+        A. 变极距
+        B. 变面积
+        C. 变介质
+        D. 变阻值
+
+  - type: textarea
+    id: answer
+    attributes:
+      label: 答案
+      description: |
+        选择题：写字母，如 A
+        填空题：按空顺序写，多个空用 | 或换行分隔；同一空多种说法用 / 分隔
+        名词解释：写参考答案
+        计算题：以数值开头，如 2.5%
+      placeholder: 变极距 | 变面积
+    validations:
+      required: true
+
+  - type: input
+    id: keywords
+    attributes:
+      label: 关键词 / 要点（名词解释填）
+      description: 用于判分，至少 3 组；组间用 | 分隔，同组同义说法用 / 分隔
+      placeholder: 电容量变化|极板间距|被测量
+
+  - type: input
+    id: unit
+    attributes:
+      label: 单位与容差（计算题填）
+      description: 写法如「V 0.02」表示单位 V、允许 2% 误差；只写单位也可以，默认 3%
+      placeholder: V 0.02
+
+  - type: textarea
+    id: exp
+    attributes:
+      label: 解析
+      description: 说明为什么对、其它选项错在哪；计算题请一行一步写清推导
+      placeholder: 三种基本类型分别对应 C=εS/d 中的 d、S、ε。
+    validations:
+      required: true
+
+  - type: input
+    id: source
+    attributes:
+      label: 出处
+      placeholder: 例如《传感器与检测技术》第 5 章课件 P32（2026 秋）
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: promise
+    attributes:
+      label: 版权确认
+      options:
+        - label: 我确认该题目由我原创或已获授权，同意以 CC BY-NC-SA 4.0 发布
+          required: true
+        - label: 我确认内容中不含学生姓名、学号等个人信息，也不含他人课件原文
+          required: true
