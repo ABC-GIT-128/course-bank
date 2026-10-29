@@ -1,0 +1,22 @@
+{
+  "name": "OpenCourse · 课程题库",
+  "short_name": "OC 题库",
+  "description": "把期末复习资料整理成能刷、能订正的网页题库。选择 / 填空 / 名词解释 / 计算四种题型，答错立刻给解析与出处。",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f8fb",
+  "theme_color": "#4f46e5",
+  "categories": ["education", "productivity"],
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "全部课程", "url": "./index.html" },
+    { "name": "关于与来源", "url": "./about.html" }
+  ]
+}
