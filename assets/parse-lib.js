@@ -228,7 +228,8 @@
     opts = opts || {};
     const defaultCh = Number(opts.defaultCh) || 1;
     const idPrefix = opts.idPrefix || 'b';
-    const src = normalize(text);
+    /* AI 输出末尾常带【未生成】清单（提示词要求的），它不是题目，直接截掉 */
+    const src = normalize(text).replace(/\n\s*【\s*未生成\s*】[\s\S]*$/, '\n');
 
     const blocks = [];      // { type, lines[] }
     let cur = null;
