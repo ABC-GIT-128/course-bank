@@ -21,12 +21,22 @@ permissions:
 jobs:
   # ---------- 收到投稿：自动回帖告知下一步 ----------
   ack:
-    if: github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'contribution')
+    if: contains(github.event.issue.labels.*.name, 'contribution') && (github.event.action == 'opened' || github.event.label.name == 'contribution')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v7
         with:
           script: |
+            /* 同一 Issue 只回一次，避免「新建即带标签」时重复评论 */
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            if (comments.some(c => (c.body || '').includes('已收到这条投稿'))) {
+              core.info('已经回过帖了，跳过');
+              return;
+            }
             const labels = (context.payload.issue.labels || []).map(l => l.name);
             const isQ = labels.includes('question');
             const body = [

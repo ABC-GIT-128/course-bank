@@ -3,6 +3,8 @@
 把老师的期末复习资料，整理成**能刷、能订正、能查漏**的网页题库。
 纯静态、无需登录、不收集个人信息，可部署在 GitHub Pages / Cloudflare Pages 上。
 
+- 线上站点：https://abc-git-128.github.io/course-bank/
+- 仓库：https://github.com/ABC-GIT-128/course-bank
 - 首页：搜索课程 / 章节 / 考点，按学期区分版本
 - 刷题页：选择、填空、名词解释、计算四种题型，答错立即给解析与出处
 - 数据与页面分离：新增一门课只需加一个 `data/*.js` 文件
@@ -65,11 +67,27 @@ package.json        快捷命令（npm run build / check / serve / import）
 
 想改机器人的解析规则，改 `scripts/issue-parse.js`；投稿被拒时的提示语也在里面，同学能直接看到「哪一栏填错了」。
 
-### 第一次启用需要做的三件事
+### 仓库配置（已完成，换仓库时照抄）
 
-1. 仓库 **Settings → Actions → General → Workflow permissions** 选 “Read and write permissions”（否则机器人无法提交分支）；
-2. 仓库 **Settings → Pages → Source** 选 **GitHub Actions**；
-3. 新建两个标签：`contribution`（投稿）、`approved`（审核通过）。`question` / `bug` / `takedown` 按需建。
+当前仓库已经配好，下面是等价的命令行版本，换账号/换仓库时可以复用：
+
+```bash
+gh repo create course-bank --public --description "把大学期末复习资料整理成可刷题的网页题库"
+
+# 1) 允许工作流提交分支、开 PR（默认是只读，不改这步机器人开不了 PR）
+echo '{"default_workflow_permissions":"write","can_approve_pull_request_reviews":true}' \
+  | gh api -X PUT repos/<owner>/<repo>/actions/permissions/workflow --input -
+
+# 2) Pages 源选 GitHub Actions
+gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow
+
+# 3) 两个关键标签
+gh label create contribution --color 0e8a16 --description 投稿
+gh label create approved     --color 1d76db --description 审核通过，可自动入库
+```
+
+对应的网页位置：**Settings → Actions → General → Workflow permissions**、
+**Settings → Pages → Source = GitHub Actions**。
 
 > 为什么不把「删除」和「审核」做成网页按钮：纯静态站没有鉴权，任何网页按钮都等于没有权限。
 > 权限边界放在**仓库写权限**上，人工动作就是「打标签 / 合并 / 跑一条命令」，简单而且全程留痕。

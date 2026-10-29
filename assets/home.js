@@ -117,9 +117,9 @@
   }
 
   function contribCard() {
-    return '<a class="ccard ccard-add" href="about.html#contribute">' +
+    return '<a class="ccard ccard-add" href="https://github.com/ABC-GIT-128/course-bank/issues/new?template=new-question.yml" target="_blank" rel="noopener">' +
       '<div class="plus">＋</div>' +
-      '<h3>提交一份资料</h3>' +
+      '<h3>提交一道题</h3>' +
       '<p class="ccsub">手机上填一张表就能提交，审核通过后署上你的名字。</p>' +
       '</a>';
   }
