@@ -46,6 +46,10 @@ jobs:
             fi
           done
 
+      # 给静态资源加版本号：穿透浏览器与 Service Worker 缓存
+      - name: 加缓存版本号
+        run: node scripts/stamp-version.js .build
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .build
