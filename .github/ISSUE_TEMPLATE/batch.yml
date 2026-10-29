@@ -1,0 +1,79 @@
+name: 批量提交题目（一次多题）
+description: 把整理好的题目整段粘贴进来，一次可混排选择/填空/名词解释/计算
+title: "[批量] "
+labels: ["contribution", "batch", "question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        一次可提交多道题，**四种题型可以混在一起**。
+
+        建议先去 [批量整理页](https://abc-git-128.github.io/course-bank/batch.html) 粘贴一遍，
+        页面会实时检查格式、预览识别结果，确认没问题再回来提交——能省掉来回改。
+
+  - type: dropdown
+    id: course
+    attributes:
+      label: 所属课程
+      options:
+        - 传感器与检测技术（sensor）
+        - 其它（请在下一项填写课程 ID）
+    validations:
+      required: true
+
+  - type: input
+    id: course_id
+    attributes:
+      label: 课程 ID（仅当上面选「其它」时填写）
+      placeholder: circuit
+
+  - type: input
+    id: chapter
+    attributes:
+      label: 默认章节（题目里没写「出处：第X章」时用）
+      placeholder: 3
+
+  - type: textarea
+    id: content
+    attributes:
+      label: 题目内容
+      description: |
+        格式很简单：题型标记一行，题目照抄，答案/解析/出处 各占一行。
+        同一题型下可以连着写多道题，题号另起一行即可。
+      placeholder: |
+        【选择】1. 差动变压器采用差动结构的主要目的是（  ）
+        A. 提高灵敏度并减小非线性误差
+        B. 降低对电源的要求
+        C. 减小体积
+        D. 便于标定
+        答案：A
+        解析：两线圈输出相减，非线性相互抵消，灵敏度约提高一倍。
+        出处：第4章 4.3 差动变压器
+
+        【填空】2. 应变片的主要参数有 ＿＿＿、＿＿＿。
+        答案：灵敏度 | 灵敏系数
+        解析：参数含灵敏度与灵敏系数等。
+        出处：第3章 3.1 电阻应变片
+
+        【名词】3. 灵敏度
+        答案：输出增量与输入增量之比
+        关键词：输出量变化|输入量变化|比值
+        解析：定义式 S=Δy/Δx。
+        出处：第2章 2.1 静态特性
+
+        【计算】4. 某电阻 R=10Ω，通过电流 I=2A，求电压 U。
+        答案：20 V
+        解析：由欧姆定律 U=IR|U=2×10=20V
+        出处：第1章 1.1 基本概念
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: promise
+    attributes:
+      label: 版权确认
+      options:
+        - label: 我确认以上题目由我原创或已获授权，同意以 CC BY-NC-SA 4.0 发布
+          required: true
+        - label: 我确认不含学生姓名、学号等个人信息，也不含他人课件原文
+          required: true

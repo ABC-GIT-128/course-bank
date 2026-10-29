@@ -71,12 +71,20 @@ jobs:
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
+          LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
         run: |
           mkdir -p .tmp
           printf '%s' "$ISSUE_BODY" > .tmp/issue.md
           set +e
-          node scripts/issue-parse.js --body-file .tmp/issue.md \
-               --issue-number "$ISSUE_NUMBER" --out .tmp/q.json > .tmp/parse.log 2>&1
+          if echo ",$LABELS," | grep -q ",batch,"; then
+            echo "→ 批量投稿"
+            node scripts/parse-batch.js --body-file .tmp/issue.md \
+                 --issue-number "$ISSUE_NUMBER" --out .tmp/batch.json > .tmp/parse.log 2>&1
+          else
+            echo "→ 单题投稿"
+            node scripts/issue-parse.js --body-file .tmp/issue.md \
+                 --issue-number "$ISSUE_NUMBER" --out .tmp/q.json > .tmp/parse.log 2>&1
+          fi
           CODE=$?
           cat .tmp/parse.log
           if [ $CODE -ne 0 ]; then
@@ -87,9 +95,32 @@ jobs:
 
       - name: 写入课程数据
         run: |
-          node scripts/add-question.js --json .tmp/q.json
+          if [ -f .tmp/batch.json ]; then
+            node scripts/add-question.js --json .tmp/batch.json
+          else
+            node scripts/add-question.js --json .tmp/q.json
+          fi
           node scripts/build-index.js
           node scripts/check-data.js
+
+      - name: 生成 PR 说明
+        run: |
+          {
+            echo "由投稿自动生成，来源：#${{ github.event.issue.number }}"
+            echo
+            echo '### 本次入库'
+            echo '```'
+            cat .tmp/parse.log
+            echo '```'
+            echo
+            echo '### 合并前请确认'
+            echo '- [ ] 答案正确，与教材/课件一致'
+            echo '- [ ] 解析讲得通，不是只重复答案'
+            echo '- [ ] 出处真实可查'
+            echo '- [ ] 不含他人课件原文、不含学生个人信息'
+            echo
+            echo '合并后页面会自动更新。'
+          } > .tmp/pr-body.md
 
       - name: 校验失败时回帖说明
         if: failure()
@@ -122,16 +153,7 @@ jobs:
           commit-message: '投稿 #${{ github.event.issue.number }}：新增题目'
           title: '投稿 #${{ github.event.issue.number }}：${{ github.event.issue.title }}'
           labels: contribution
-          body: |
-            由投稿自动生成，来源：#${{ github.event.issue.number }}
-
-            审核人（合并前请确认）：
-            - [ ] 答案正确，与教材/课件一致
-            - [ ] 解析讲得通，不是只重复答案
-            - [ ] 出处真实可查
-            - [ ] 不含他人课件原文、不含学生个人信息
-
-            合并后页面会自动更新。
+          body-path: .tmp/pr-body.md
 
       - name: 回帖告知 PR 地址
         if: success()
@@ -141,15 +163,21 @@ jobs:
           PR_NUM: ${{ steps.cpr.outputs.pull-request-number }}
         with:
           script: |
+            const fs = require('fs');
             const url = process.env.PR_URL;
             const num = process.env.PR_NUM;
             if (!url) {
               core.info('没有创建新 PR（可能内容无变化），跳过回帖');
               return;
             }
+            let summary = '';
+            try {
+              summary = fs.readFileSync('.tmp/parse.log', 'utf8').trim().split('\n').slice(0, 16).join('\n');
+            } catch (e) {}
+            const tail = summary ? '\n\n解析结果：\n```\n' + summary + '\n```\n' : '\n';
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `已生成 PR #${num}：${url}\n\n合并后即刻生效。若长期无人合并，可以直接在 PR 里催一下。`
+              body: `已生成 PR #${num}：${url}` + tail + '\n合并后即刻生效；如果有题目被跳过，按上面提示改好后可以另开一条投稿。'
             });

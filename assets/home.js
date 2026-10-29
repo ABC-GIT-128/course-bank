@@ -117,10 +117,10 @@
   }
 
   function contribCard() {
-    return '<a class="ccard ccard-add" href="https://github.com/ABC-GIT-128/course-bank/issues/new?template=new-question.yml" target="_blank" rel="noopener">' +
+    return '<a class="ccard ccard-add" href="batch.html">' +
       '<div class="plus">＋</div>' +
-      '<h3>提交一道题</h3>' +
-      '<p class="ccsub">手机上填一张表就能提交，审核通过后署上你的名字。</p>' +
+      '<h3>提交题目</h3>' +
+      '<p class="ccsub">整段粘贴、一次多题，实时检查格式，审核通过后署上你的名字。</p>' +
       '</a>';
   }
 
