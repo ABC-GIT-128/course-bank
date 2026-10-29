@@ -54,7 +54,7 @@ function get() {
   const keys = Object.keys(S);
   for (const want of arguments) {
     const hit = keys.find(k => k.indexOf(want) >= 0);
-    if (hit && S[hit]) return S[hit];
+    if (hit && S[hit] && S[hit].trim() !== '_No response_') return S[hit];
   }
   return '';
 }
@@ -90,7 +90,7 @@ need(type, '「题型」没选或无法识别：' + typeRaw);
 
 /* 题干：填空统一成三个全角下划线 */
 let qText = need(get('题干'), '没有填「题干」');
-qText = qText.replace(/_{2,}/g, '＿＿＿').replace(/＿{2}/g, '＿＿＿');
+qText = qText.replace(/_{2,}/g, '＿＿＿').replace(/＿{2,}/g, '＿＿＿');
 
 const answer = need(get('答案'), '没有填「答案」');
 const expText = need(get('解析'), '没有填「解析」');
@@ -188,7 +188,7 @@ if (fail.length) {
 
 const payload = { course, question: q };
 
-if (flag('check')) {
+if (args.indexOf('--check') >= 0) {
   console.log('✓ 可以入库：' + course + ' / ' + q.id + ' / ' + q.type);
 } else if (outFile) {
   fs.writeFileSync(outFile, JSON.stringify(payload, null, 2), 'utf8');

@@ -33,9 +33,8 @@ jobs:
       - name: 构建静态站点
         run: |
           mkdir -p .build
+          # 只发布运行时需要的文件；脚本、授权凭证、说明文档不进产物
           cp -r index.html quiz.html about.html assets data .build/
-          # 授权凭证与脚本不进产物
-          rm -f .build/data/_status.js.bak
 
       - uses: actions/upload-pages-artifact@v3
         with:
