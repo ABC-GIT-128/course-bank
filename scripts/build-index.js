@@ -118,3 +118,56 @@ console.log(`已生成 data/courses.js：${list.length} 门课程，${list.reduc
   `（在架 ${act.length} · 归档 ${arc.length} · 下架 ${hid.length}；保留窗口 ${cutoff}–${nowYear}）`);
 if (arc.length) console.log('  归档：' + arc.map(c => c.title + '(' + c.newestYear + ')').join('、'));
 if (hid.length) console.log('  下架：' + hid.map(c => c.title).join('、'));
+
+/* ==================== 课程短地址：/sensor/ ====================
+ * 每门课生成一个目录，里面是固定了课程 id 的刷题页。
+ * 这样链接是 /course-bank/sensor/，比 quiz.html?course=sensor 好记。
+ * 老链接（quiz.html?course=sensor）仍然可用。
+ */
+const ROOT = path.join(__dirname, '..');
+const QUIZ = path.join(ROOT, 'quiz.html');
+const MARK = '<!--oc-course-route-->';
+
+function buildRoute(c) {
+  if (!fs.existsSync(QUIZ)) return false;
+  let html = fs.readFileSync(QUIZ, 'utf8');
+
+  /* 1) base：让页面里的 assets/、data/ 相对路径指回站点根目录 */
+  if (html.indexOf('<base ') < 0) {
+    html = html.replace('<meta charset="UTF-8">',
+      '<meta charset="UTF-8">\n' + MARK + '\n<base href="../">');
+  }
+  /* 2) 固定课程 id，不再依赖 ?course= */
+  const anchor = '<script src="data/_status.js"></script>';
+  if (html.indexOf(anchor) >= 0) {
+    html = html.replace(anchor,
+      '<script>window.OC_COURSE_ID = ' + JSON.stringify(c.id) + ';</script>\n' + anchor);
+  }
+  /* 3) 静态标题（JS 也会再改一次，主要是给分享卡片用） */
+  html = html.replace(/<title>[^<]*<\/title>/, '<title>' + c.title + ' · 刷题</title>');
+
+  const d = path.join(ROOT, c.id);
+  fs.mkdirSync(d, { recursive: true });
+  fs.writeFileSync(path.join(d, 'index.html'), html, 'utf8');
+  return true;
+}
+
+/* 清掉已经不存在的课程目录（只删带标记的，绝不碰别的目录） */
+function cleanupRoutes(keep) {
+  fs.readdirSync(ROOT, { withFileTypes: true })
+    .filter(e => e.isDirectory() && e.name[0] !== '.' && keep.indexOf(e.name) < 0)
+    .forEach(e => {
+      const f = path.join(ROOT, e.name, 'index.html');
+      if (!fs.existsSync(f)) return;
+      const head = fs.readFileSync(f, 'utf8').slice(0, 2000);
+      if (head.indexOf(MARK) < 0) return;
+      fs.rmSync(path.join(ROOT, e.name), { recursive: true, force: true });
+      console.log('  已移除过期课程目录：' + e.name + '/');
+    });
+}
+
+const kept = [];
+list.forEach(c => { if (buildRoute(c)) kept.push(c.id); });
+cleanupRoutes(kept);
+console.log('已生成 ' + kept.length + ' 个课程短地址：' + kept.map(k => '/' + k + '/').join(' '));
+

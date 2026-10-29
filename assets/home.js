@@ -54,7 +54,7 @@
       .filter(k => c.tags[k])
       .map(k => ({ choice: '选择', fill: '填空', term: '名词解释', calc: '计算' }[k] + ' ' + c.tags[k]))
       .join(' · ');
-    return '<a class="ccard' + (c.status === 'archived' ? ' is-arc' : '') + '" href="quiz.html?course=' + encodeURIComponent(c.id) + '">' +
+    return '<a class="ccard' + (c.status === 'archived' ? ' is-arc' : '') + '" href="' + encodeURIComponent(c.id) + '/">' +
       '<div class="cchd"><h3>' + esc(c.title) + '</h3>' + terms + '</div>' +
       '<p class="ccsub">' + esc(c.subtitle || '') + '</p>' +
       '<p class="ccmeta">' + esc(c.college) + ' · <b>' + c.count + '</b> 题 · ' + c.chapters.length + ' 章 · 更新 ' + esc(c.updatedAt) + '</p>' +
