@@ -211,10 +211,49 @@ D. 电感式
       '下面是资料内容：\n（把你的文档粘贴在这里）';
   }
 
-  fetch('templates/ai-prompt.txt')
-    .then(r => (r.ok ? r.text() : Promise.reject(new Error('404'))))
-    .then(t => { promptText = t.trim(); elPrompt.textContent = promptText; })
-    .catch(() => { promptText = fallbackPrompt(); elPrompt.textContent = promptText; });
+  /* 两份指令：gen = 原始资料出题；norm = 原文已是题目，只规整格式不改题 */
+  const PROMPTS = {
+    gen:  { url: 'templates/ai-prompt.txt', label: '原始资料 → 生成题目' },
+    norm: { url: 'templates/ai-prompt-normalize.txt', label: '已是题目 → 只规整格式' }
+  };
+  const HINTS = {
+    gen:  '适用于复习要点、课件文字这类"还不是题目"的资料：AI 会把知识点改写成题目，并自己写解析。',
+    norm: '适用于往年卷、练习题、带答案的题库：AI 只做排版规整，题干/选项/答案逐字保留，缺答案或缺解析时标「待补」，不会自己编。'
+  };
+  let promptMode = 'gen';
+  const promptCache = {};
+
+  function applyMode(mode) {
+    promptMode = mode;
+    document.querySelectorAll('#segbar .seg').forEach(b => {
+      b.classList.toggle('on', b.getAttribute('data-mode') === mode);
+    });
+    $('#seghint').textContent = HINTS[mode];
+    if (promptCache[mode]) {
+      promptText = promptCache[mode];
+      elPrompt.textContent = promptText;
+      return;
+    }
+    elPrompt.textContent = '指令加载中…';
+    promptText = '';
+    fetch(PROMPTS[mode].url)
+      .then(r => (r.ok ? r.text() : Promise.reject(new Error('404'))))
+      .then(t => {
+        promptCache[mode] = t.trim();
+        if (promptMode === mode) { promptText = promptCache[mode]; elPrompt.textContent = promptText; }
+      })
+      .catch(() => {
+        promptCache[mode] = fallbackPrompt();
+        if (promptMode === mode) { promptText = promptCache[mode]; elPrompt.textContent = promptText; }
+      });
+  }
+
+  $('#segbar').addEventListener('click', e => {
+    const btn = e.target.closest('.seg');
+    if (btn) applyMode(btn.getAttribute('data-mode'));
+  });
+
+  applyMode('gen');
 
   async function copyPrompt(btn) {
     if (!promptText) { toast('指令还没加载好，稍等一下'); return; }
