@@ -24,15 +24,20 @@
     padding:12px 13px;font-size:13.5px;line-height:1.8;font-family:ui-monospace,Menlo,Consolas,"Courier New",monospace;
     box-sizing:border-box;outline:none;background:#fcfcfe;color:var(--ink)}
   #paste:focus{border-color:#b9c0f5;background:#fff}
-  .bhelp{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 2px;padding:9px 12px;
+  .bhelp{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;row-gap:8px;margin:10px 0 2px;padding:9px 12px;
     border-radius:11px;background:#f7f8fb;border:1px dashed #dde2ec;font-size:12.5px;color:#4b5563;
     transition:background .2s,border-color .2s,box-shadow .2s}
   .bhelp.empty{background:#f5f7ff;border-color:#c7cdfa;box-shadow:0 0 0 3px rgba(79,70,229,.05)}
   .bhelp .bk{font-weight:600;color:#1b2130;white-space:nowrap}
-  .bhelp .bstep{flex:1 1 220px;line-height:1.6;color:#6b7280}
+  .bhelp .bstep{flex:1 1 200px;min-width:0;line-height:1.6;color:#6b7280}
   .bhelp .mini{border:1px solid var(--line);background:#fff;color:#4b5563;border-radius:8px;
     padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap}
   .bhelp .mini:hover{background:#eef0f6}
+  @media(max-width:560px){
+    .bhelp{align-items:flex-start}
+    .bhelp .bstep{flex:1 1 100%;order:3}
+    .bhelp .mini{flex:0 0 auto}
+  }
   .bhelp .primary-mini{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
   .bhelp .primary-mini:hover{filter:brightness(1.06);background:var(--accent)}
   .bhint.flash{animation:fmtflash 1.6s ease}

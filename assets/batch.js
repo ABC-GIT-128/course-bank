@@ -173,7 +173,7 @@ D. 电感式
     }
   });
 
-  $('#btnSubmit').addEventListener('click', () => {
+  $('#btnSubmit').addEventListener('click', async e => {
     if (!elPaste.value.trim()) { toast('先把题目粘进来'); return; }
     const r = window.OCParse.parseBatch(elPaste.value, { idPrefix: 'p' });
     if (r.errors.length) {
@@ -181,7 +181,16 @@ D. 电感式
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+    /* 先把文本放进剪贴板，再打开表单——省掉用户手动复制粘贴 */
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(elPaste.value);
+      copied = true;
+    } catch (err) {
+      copied = false;
+    }
     window.open(SUBMIT_URL, '_blank', 'noopener');
+    toast(copied ? '已复制，打开的表单里直接粘贴即可' : '表单已打开，请手动复制上面的内容');
   });
 
   elHint.textContent = HINT;
