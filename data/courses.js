@@ -116,42 +116,5 @@ window.OC_COURSES = [
     "statusAt": "",
     "outOfWindow": false,
     "newestYear": 2026
-  },
-  {
-    "id": "test",
-    "file": "test.js",
-    "title": "test",
-    "subtitle": "期末刷题",
-    "college": "专业基础课",
-    "terms": [
-      "2026-autumn"
-    ],
-    "termLabels": {
-      "2026-autumn": "2026 秋"
-    },
-    "updatedAt": "2026-10-29",
-    "license": "CC BY-NC-SA 4.0",
-    "chapters": [
-      1
-    ],
-    "chapterNames": {
-      "1": "第1章"
-    },
-    "count": 13,
-    "hidden": 0,
-    "tags": {
-      "choice": 5,
-      "fill": 5,
-      "term": 3
-    },
-    "keywords": [
-      "test",
-      "第1章"
-    ],
-    "status": "active",
-    "statusReason": "",
-    "statusAt": "",
-    "outOfWindow": false,
-    "newestYear": 2026
   }
 ];
