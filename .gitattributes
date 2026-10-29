@@ -1,0 +1,8 @@
+# 统一换行，避免 Windows 上每次改动都出现整篇 diff
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf  binary
+*.docx binary

@@ -21,21 +21,22 @@ permissions:
 jobs:
   # ---------- 收到投稿：自动回帖告知下一步 ----------
   ack:
-    if: >
-      github.event.action == 'opened' &&
-      contains(github.event.issue.labels.*.name, 'contribution')
+    if: github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'contribution')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v7
         with:
           script: |
+            const labels = (context.payload.issue.labels || []).map(l => l.name);
+            const isQ = labels.includes('question');
             const body = [
               '已收到这条投稿，谢谢！',
               '',
-              '接下来：维护者会核对答案、解析与出处（通常 1–3 天）。',
-              '通过后会自动生成一条 PR 并合入，页面随即更新。',
+              isQ
+                ? '接下来：维护者会核对答案、解析与出处（通常 1–3 天），通过后自动生成 PR 并合入。'
+                : '接下来：维护者会联系你确认资料来源与授权情况，再决定是否建课。',
               '',
-              '如果填错了，直接在本条 Issue 里补充说明即可，不用重新提交。'
+              '如果哪里填错了，直接在本条 Issue 里补充说明即可，不用重新提交。'
             ].join('\n');
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -46,10 +47,7 @@ jobs:
 
   # ---------- 审核通过：生成 PR ----------
   generate:
-    if: >
-      github.event.action == 'labeled' &&
-      github.event.label.name == 'approved' &&
-      contains(github.event.issue.labels.*.name, 'contribution')
+    if: github.event.action == 'labeled' && github.event.label.name == 'approved' && contains(github.event.issue.labels.*.name, 'contribution')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -126,7 +124,7 @@ jobs:
             合并后页面会自动更新。
 
       - name: 回帖告知 PR 地址
-        if: success() && steps.cpr.outputs.pull-request-url != ''
+        if: success()
         uses: actions/github-script@v7
         env:
           PR_URL: ${{ steps.cpr.outputs.pull-request-url }}
@@ -135,6 +133,10 @@ jobs:
           script: |
             const url = process.env.PR_URL;
             const num = process.env.PR_NUM;
+            if (!url) {
+              core.info('没有创建新 PR（可能内容无变化），跳过回帖');
+              return;
+            }
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,

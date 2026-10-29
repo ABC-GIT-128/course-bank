@@ -10,7 +10,9 @@
     "verify": "node scripts/build-index.js && node scripts/check-data.js",
     "new-course": "node scripts/new-course.js",
     "import": "node scripts/import-form.js",
-    "admin": "node scripts/admin.js"
+    "admin": "node scripts/admin.js",
+    "parse": "node scripts/issue-parse.js",
+    "add": "node scripts/add-question.js"
   },
   "license": "MIT"
 }

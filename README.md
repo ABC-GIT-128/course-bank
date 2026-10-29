@@ -32,15 +32,64 @@ scripts/
   check-data.js     数据校验 + 隐私扫描（提交前必跑）
   new-course.js     生成新课程骨架
   import-form.js    从 CSV（问卷导出）导入题目
+  issue-parse.js    把 GitHub Issue 投稿解析成题目 JSON
+  add-question.js   把一条题目追加进课程数据（保持原排版）
   admin.js          下架 / 恢复 / 归档 / 记录
 templates/          题目导入 CSV 模板
 package.json        快捷命令（npm run build / check / serve / import）
-.github/ISSUE_TEMPLATE/   投稿与报错模板
+.github/
+  ISSUE_TEMPLATE/   投稿与报错模板（手机可填）
+  workflows/        question-pr.yml（投稿→PR）· pages.yml（自动部署）
 ```
 
-## 添加内容：三种方式，按上手难度排
+## 手机投稿 → 审核 → 自动上线
 
-### 方式一（推荐给同学）：填表 → 一键导入
+这是给同学用的主通道，全程不需要写代码、不需要装环境。
+
+```
+同学在手机上填 Issue 表单
+        ↓  自动回帖「已收到」
+维护者看一遍，打上 approved 标签
+        ↓  GitHub Actions 运行
+解析 → 写入 data/<课程>.js → 校验 → 自动开 PR
+        ↓  维护者合并
+页面更新（pages.yml 自动部署）
+```
+
+**同学端**：首页「提交一份资料」→「新增题目」→ 按表单填 → 提交。首次需要一个 GitHub 账号，之后可以直接复用。
+
+**维护者端**：只有两步。
+
+1. 看 Issue 内容，确认答案/解析/出处没问题；
+2. 加 `approved` 标签 → 等机器人开 PR → 看一遍 diff → 合并。
+
+想改机器人的解析规则，改 `scripts/issue-parse.js`；投稿被拒时的提示语也在里面，同学能直接看到「哪一栏填错了」。
+
+### 第一次启用需要做的三件事
+
+1. 仓库 **Settings → Actions → General → Workflow permissions** 选 “Read and write permissions”（否则机器人无法提交分支）；
+2. 仓库 **Settings → Pages → Source** 选 **GitHub Actions**；
+3. 新建两个标签：`contribution`（投稿）、`approved`（审核通过）。`question` / `bug` / `takedown` 按需建。
+
+> 为什么不把「删除」和「审核」做成网页按钮：纯静态站没有鉴权，任何网页按钮都等于没有权限。
+> 权限边界放在**仓库写权限**上，人工动作就是「打标签 / 合并 / 跑一条命令」，简单而且全程留痕。
+
+### 本地自己测一遍（不依赖 GitHub）
+
+```bash
+# 把一段 issue 表单内容存成文件，模拟一次投稿
+node scripts/issue-parse.js --body-file 投稿.md --issue-number 12 --out .tmp/q.json
+node scripts/add-question.js --json .tmp/q.json
+npm run verify
+```
+
+解析不通过时退出码为 1，并打印「哪个字段有问题」，与机器人回帖内容一致。
+
+## 添加内容：四种方式，按上手难度排
+
+> 方式一见上一节（手机表单投稿）。下面三种是「一次加一批」时更快的路径。
+
+### 方式二（批量导入）：CSV → 一键入库
 
 不需要碰代码，也不需要 GitHub 账号。
 
@@ -56,7 +105,7 @@ node scripts/build-index.js && node scripts/check-data.js
 课程文件不存在时会自动创建；表头顺序随意，缺列按空处理。
 导入器会跳过写错的行并告诉你是第几行，也会自动清掉骨架里的示例题。
 
-### 方式二（推荐给维护者）：命令行生成骨架再编辑
+### 方式三（维护者）：命令行生成骨架再编辑
 
 ```bash
 node scripts/new-course.js --id circuit --title 电路分析基础 \
@@ -65,7 +114,7 @@ node scripts/new-course.js --id circuit --title 电路分析基础 \
 
 会生成带注释的 `data/circuit.js`，改 `questions` 即可。
 
-### 方式三：复制现有课程
+### 方式四：复制现有课程
 
 复制 `data/sensor.js` 为 `data/<课程id>.js`，改 `course` 字段和 `questions`。
 
