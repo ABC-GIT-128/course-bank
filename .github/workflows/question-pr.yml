@@ -19,6 +19,44 @@ permissions:
   issues: write
 
 jobs:
+  # ---------- 兜底打标：没用模板、正文却是题目的，自动补标签 ----------
+  triage:
+    if: github.event.action == 'opened'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body || '';
+            const names = (issue.labels || []).map(l => l.name);
+            if (names.includes('contribution')) { core.info('已有投稿标签，跳过'); return; }
+            const looksLikeQuestions = /【\s*(选择|填空|名词|计算|名词解释)/.test(body);
+            if (!looksLikeQuestions) { core.info('正文不像题目，跳过'); return; }
+
+            const hasCourse = /(所属课程|课程\s*[:：]\s*[A-Za-z0-9_-]+)/.test(body);
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: ['contribution', 'batch', 'question']
+            });
+            const tips = [
+              '这条 Issue 看起来是题目内容，但我没检测到投稿标签，已自动补上 `contribution` / `batch` / `question`。',
+              '',
+              hasCourse
+                ? '下一步：维护者核对后加 `approved` 标签，系统会自动生成 PR，合并后才会上线。'
+                : '**还缺「所属课程」**：请在本条 Issue 里补一行，例如 `所属课程：sensor`，否则自动入库不知道往哪门课里放。',
+              '',
+              '提醒：**提交 Issue ≠ 上线**。要经过「维护者打 approved → 生成 PR → 合并」三步，页面才会出现新题。'
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: tips
+            });
+
   # ---------- 收到投稿：自动回帖告知下一步 ----------
   ack:
     if: contains(github.event.issue.labels.*.name, 'contribution') && (github.event.action == 'opened' || github.event.label.name == 'contribution')
