@@ -298,3 +298,15 @@ body.home main.wrap{flex:1}
 .ccard.is-arc{opacity:.86}
 .ccard.is-arc:hover{opacity:1}
 .hiddennote{font-size:11.5px;color:#b45309;background:#fff8ed;border-radius:6px;padding:2px 7px;white-space:nowrap;font-style:normal}
+
+/* ==================== 安装到桌面提示 ==================== */
+#instChip{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:80;
+  display:flex;align-items:center;gap:8px;padding:9px 10px 9px 14px;border-radius:99px;
+  background:rgba(27,33,48,.94);color:#fff;font-size:12.5px;box-shadow:0 10px 26px rgba(15,23,42,.28);
+  backdrop-filter:blur(8px);animation:chipin .3s ease}
+@keyframes chipin{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+#instChip span{white-space:nowrap;padding-right:2px}
+#instChip button{border:none;font-family:inherit;font-size:12.5px;cursor:pointer;border-radius:99px;padding:5px 11px}
+#instChip button[data-act=go]{background:#fff;color:#1b2130;font-weight:600}
+#instChip button[data-act=no]{background:transparent;color:#c3c9d6;padding:5px 7px;font-size:14px}
+@media(max-width:420px){#instChip{font-size:12px;bottom:10px}}

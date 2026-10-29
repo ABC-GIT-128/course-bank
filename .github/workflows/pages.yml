@@ -34,7 +34,9 @@ jobs:
         run: |
           mkdir -p .build
           # 只发布运行时需要的文件；脚本、授权凭证、说明文档不进产物
+          # PWA：manifest + service worker 必须在根目录
           cp -r index.html quiz.html about.html assets data templates .build/
+          cp manifest.webmanifest sw.js .build/
 
       - uses: actions/upload-pages-artifact@v3
         with:
