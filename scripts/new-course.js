@@ -26,7 +26,7 @@ if (!id || !title) {
 
 const college = flag('college') || '专业基础课';
 const term = flag('term') || (new Date().getFullYear() + '-autumn');
-const label = term.replace('autumn', ' 秋').replace('spring', ' 春');
+const label = term.replace(/-?autumn/, ' 秋').replace(/-?spring/, ' 春').trim();
 const file = path.join(__dirname, '..', 'data', id + '.js');
 
 if (fs.existsSync(file)) {

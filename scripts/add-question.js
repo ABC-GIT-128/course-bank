@@ -44,7 +44,7 @@ if (!fs.existsSync(file)) {
     process.exit(1);
   }
   const term = flag('term') || payload.term || (new Date().getFullYear() + '-autumn');
-  const label = term.replace('autumn', ' 秋').replace('spring', ' 春');
+  const label = term.replace(/-?autumn/, ' 秋').replace(/-?spring/, ' 春').trim();
   const chNames = payload.chapterNames || list.reduce((m, x) => { m[x.ch || 1] = '第' + (x.ch || 1) + '章'; return m; }, {});
   const OC = {
     course: {
