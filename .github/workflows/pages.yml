@@ -24,7 +24,8 @@ jobs:
         with:
           node-version: 20
 
-      # 部署前再校验一次：宁可这次不发布，也不要把坏数据推上线
+      # 部署前重建索引并校验：宁可这次不发布，也不要把坏数据推上线
+      # 注意：data/courses.js 是产物、不入库，就是在这里现生成的
       - name: 校验数据
         run: |
           node scripts/build-index.js

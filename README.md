@@ -12,6 +12,9 @@
 
 ## 本地预览
 
+> 首次 clone 后先跑一次 `npm run build` 生成 `data/courses.js`（它是构建产物，不在仓库里），
+> 否则首页会是空列表。
+
 页面用 `<script>` 加载数据，直接双击 `index.html` 也能跑。若要用本地服务器：
 
 ```bash
@@ -27,8 +30,8 @@ quiz.html           刷题页（?course=<id>）
 about.html          关于、来源、许可、下架通道
 assets/             app.css · home.js · quiz.js
 data/
-  _status.js        下架 / 归档状态表（管理员维护）
-  courses.js        课程索引（自动生成，勿手改）
+  _status.js        下架 / 归档状态表（唯一需要手改的状态文件）
+  courses.js        课程索引（构建产物，不入库；npm run build 生成）
   sensor.js         课程数据：传感器与检测技术
 scripts/
   build-index.js    扫描 data/*.js 生成 courses.js（含两年窗口计算）
@@ -217,6 +220,37 @@ npm run admin -- list
 
 `check-data.js` 会拦截：重复 id、答案越界、填空数量与题干不符、缺少解析或出处，
 以及正文里出现的手机号、身份证号、学号等个人信息。
+
+## 日常运维：上架 / 下架 / 归档
+
+**只需要改一个文件：`data/_status.js`。** 改完提交，Actions 部署时会自动重建 `data/courses.js`，约 40 秒生效。
+
+```js
+window.OC_STATUS = {
+  version: 1,
+  updatedAt: '2026-10-29',
+  questions: {},          // 题目级下架：{ c01: { status:'hidden', at:'…', reason:'…' } }
+  courses: {              // 课程级
+    test1: { status: 'hidden',   at: '2026-10-29', by: 'admin', reason: '重复的测试课程' },
+    // test2: { status: 'archived', … }   // archived = 归档（首页折叠进「往期课程」）
+  }
+};
+```
+
+三种状态：
+
+| status | 首页 | 课程页 | 数据 |
+|---|---|---|---|
+| `active` | 正常卡片 | 正常 | 在 |
+| `archived` | 折叠进「往期课程」，带灰角标 | 顶部黄条提示"已归档" | 在 |
+| `hidden` | 完全看不到 | 「本课程已下架（原因）」 | 在，可恢复 |
+
+- **恢复**：删掉对应那一行（或改成 `active`），再提交
+- **彻底删除**：`npm run admin -- purge test1 --yes`（删 `data/test1.js`），网页端就是删除该文件
+- **本地批量操作**：`npm run admin -- hide-course test1 --reason "…"` 会同时改 `_status.js` 并重建索引，再 `git add -A && git commit && git push`
+
+> 为什么 `courses.js` 不入库：它是从各课程数据 + 状态表算出来的成品，入库只会产生"源头和成品不一致"的困惑。
+> 线上每次部署都会重新生成，所以永远是最新的。
 
 ## 生命周期：只保留近两年
 
