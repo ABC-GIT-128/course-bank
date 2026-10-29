@@ -28,3 +28,6 @@ consent/*
 # 原始资料（课件、试卷、扫描件）一律不入库
 raw/
 _inbox/
+
+# 构建生成的课程短地址目录（scripts/build-index.js 产出，如 sensor/index.html）
+/**/index.html

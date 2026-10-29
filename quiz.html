@@ -42,7 +42,7 @@
 <script src="data/courses.js"></script>
 <script>
 (function(){
-  var id = new URLSearchParams(location.search).get('course') || 'sensor';
+  var id = window.OC_COURSE_ID || new URLSearchParams(location.search).get('course') || 'sensor';
   /* 文件名与课程 id 解耦：优先用索引里的 file 字段 */
   var hit = (window.OC_COURSES || []).filter(function(c){ return c.id === id; })[0];
   var file = (hit && hit.file) ? hit.file : (id + '.js');
