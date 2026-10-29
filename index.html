@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>OpenCourse · 开源课程题库</title>
+<meta name="description" content="把老师的期末复习资料整理成可刷题的网页，按课程与学期组织，完全免费、无需登录。">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body class="home">
+
+<div class="topbar">
+  <div class="topin">
+    <a class="logo" href="index.html">Open<span>Course</span></a>
+    <div class="navlinks">
+      <a href="about.html">关于与来源</a>
+      <a href="about.html#contribute">我要贡献</a>
+    </div>
+  </div>
+</div>
+
+<header class="hero">
+  <h1>把复习资料，变成能刷的题</h1>
+  <p>按课程与学期整理，免费、无需登录。题目由同学整理改写，出处可查。</p>
+
+  <div class="searchbox">
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <input id="q" type="search" inputmode="search" autocomplete="off" placeholder="搜索课程、章节或考点，例如「压电」「电桥」">
+    <button id="clear" class="clearbtn" aria-label="清空" hidden>×</button>
+  </div>
+
+  <div class="hot" id="hot"></div>
+</header>
+
+<main class="wrap">
+  <div class="listhead">
+    <h2 id="listtitle">全部课程</h2>
+    <span id="listmeta" class="muted"></span>
+  </div>
+  <div id="cards"></div>
+  <div id="empty" class="empty" hidden>
+    <p>没有匹配的课程</p>
+    <p class="muted">试试更短的关键词，或者 <a href="about.html#contribute">提交一份资料</a>。</p>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p><b>OpenCourse</b> · 开源课程题库</p>
+    <p class="muted">代码 MIT 许可；题目内容 CC BY-NC-SA 4.0（署名—非商业—相同方式共享）。</p>
+    <p class="muted">本站为学习者自发整理，非任何学校官方发布。内容版权归原作者，如有侵权请联系<a href="about.html#takedown">下架</a>。</p>
+  </div>
+</footer>
+
+<script src="data/_status.js"></script>
+<script src="data/courses.js"></script>
+<script src="assets/home.js"></script>
+</body>
+</html>

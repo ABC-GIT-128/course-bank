@@ -1,0 +1,16 @@
+{
+  "name": "opencourse",
+  "version": "0.1.0",
+  "private": true,
+  "description": "把老师的期末复习资料整理成可刷题的网页题库（纯静态）",
+  "scripts": {
+    "serve": "python -m http.server 8765",
+    "build": "node scripts/build-index.js",
+    "check": "node scripts/check-data.js",
+    "verify": "node scripts/build-index.js && node scripts/check-data.js",
+    "new-course": "node scripts/new-course.js",
+    "import": "node scripts/import-form.js",
+    "admin": "node scripts/admin.js"
+  },
+  "license": "MIT"
+}

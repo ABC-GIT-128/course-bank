@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>刷题 · OpenCourse</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="toast" id="toast"><span id="ti">✕</span><span id="tt">答错了</span></div>
+
+<header class="hd">
+  <div class="hdin">
+    <div class="row1">
+      <div class="ttl"><a class="back" href="index.html">← 全部课程</a><b id="cname">加载中…</b><span id="cterm" class="cterm"></span></div>
+      <div class="tools">
+        <button class="btn" id="btnShuffle">随机</button>
+        <button class="btn" id="btnWrong">错题 <b id="wrongN">0</b></button>
+        <button class="btn plain" id="btnReset">重置</button>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="track"><i id="bar"></i></div>
+      <div class="stat" id="stat">已答 <b>0</b>/0 · 正确率 —</div>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+</header>
+
+<main id="list"></main>
+<button class="fab" id="fab" title="跳到下一道未答">↓</button>
+
+<script src="data/_status.js"></script>
+<script src="data/courses.js"></script>
+<script>
+(function(){
+  var id = new URLSearchParams(location.search).get('course') || 'sensor';
+  /* 文件名与课程 id 解耦：优先用索引里的 file 字段 */
+  var hit = (window.OC_COURSES || []).filter(function(c){ return c.id === id; })[0];
+  var file = (hit && hit.file) ? hit.file : (id + '.js');
+  var d = document.createElement('script');
+  d.src = 'data/' + file;
+  d.onload = function(){
+    var s = document.createElement('script');
+    s.src = 'assets/quiz.js';
+    s.onerror = function(){ fail('脚本加载失败'); };
+    document.body.appendChild(s);
+  };
+  d.onerror = function(){ fail('没有找到课程数据：' + id); };
+  function fail(msg){
+    var el = document.getElementById('list');
+    if(el) el.innerHTML = '<div class="empty">' + msg + '<br><a href="index.html">返回全部课程</a></div>';
+  }
+  document.head.appendChild(d);
+})();
+</script>
+</body>
+</html>

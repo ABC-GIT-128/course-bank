@@ -1,0 +1,38 @@
+name: 内容下架申请
+description: 权利人要求移除内容（承诺 72 小时内处理）
+title: "[下架] "
+labels: ["takedown", "urgent"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        如果你认为本站内容侵犯了你的权利，请填写以下信息，我们会在 **72 小时内**处理并回复。
+        也可以直接发邮件（见 about 页面）。
+  - type: input
+    id: who
+    attributes:
+      label: 你的身份
+      placeholder: 课程教师 / 版权方 / 学校相关部门 / 其他
+    validations:
+      required: true
+  - type: input
+    id: target
+    attributes:
+      label: 涉及内容
+      description: 课程名 + 题目编号，或页面路径
+      placeholder: 传感器与检测技术 / 第 3 章 计算题 Q12
+    validations:
+      required: true
+  - type: textarea
+    id: reason
+    attributes:
+      label: 下架理由
+    validations:
+      required: true
+  - type: input
+    id: contact
+    attributes:
+      label: 联系方式
+      description: 邮箱或其它可回复的方式
+    validations:
+      required: true

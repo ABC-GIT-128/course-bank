@@ -1,0 +1,143 @@
+name: 投稿自动入库
+
+# 流程：
+#   1) 同学用「新增题目」模板提 Issue（手机就能填）
+#   2) 本工作流自动回帖：已收到，等待审核
+#   3) 维护者打上 approved 标签 → 自动解析、写数据、校验、开 PR
+#   4) 维护者合并 PR → 页面更新
+#
+# 为什么不在 issue 打开时直接生成：审核权必须由人掌握，
+# 打标签这一步就是「人工放行」，避免有人用投稿通道塞垃圾内容。
+
+on:
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  # ---------- 收到投稿：自动回帖告知下一步 ----------
+  ack:
+    if: >
+      github.event.action == 'opened' &&
+      contains(github.event.issue.labels.*.name, 'contribution')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              '已收到这条投稿，谢谢！',
+              '',
+              '接下来：维护者会核对答案、解析与出处（通常 1–3 天）。',
+              '通过后会自动生成一条 PR 并合入，页面随即更新。',
+              '',
+              '如果填错了，直接在本条 Issue 里补充说明即可，不用重新提交。'
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
+
+  # ---------- 审核通过：生成 PR ----------
+  generate:
+    if: >
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'approved' &&
+      contains(github.event.issue.labels.*.name, 'contribution')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 解析投稿内容
+        id: parse
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          mkdir -p .tmp
+          printf '%s' "$ISSUE_BODY" > .tmp/issue.md
+          set +e
+          node scripts/issue-parse.js --body-file .tmp/issue.md \
+               --issue-number "$ISSUE_NUMBER" --out .tmp/q.json > .tmp/parse.log 2>&1
+          CODE=$?
+          cat .tmp/parse.log
+          if [ $CODE -ne 0 ]; then
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+
+      - name: 写入课程数据
+        run: |
+          node scripts/add-question.js --json .tmp/q.json
+          node scripts/build-index.js
+          node scripts/check-data.js
+
+      - name: 校验失败时回帖说明
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let msg = '这条投稿暂时无法自动入库，需要人工处理。';
+            for (const f of ['.tmp/parse.log']) {
+              if (fs.existsSync(f)) {
+                const t = fs.readFileSync(f, 'utf8').trim();
+                if (t) msg = '这条投稿还需要改一下：\n\n```\n' + t + '\n```\n\n按上面提示修改后，让维护者重新加 `approved` 标签即可。';
+              }
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: msg
+            });
+
+      - name: 生成 PR
+        if: success()
+        id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: contribute/issue-${{ github.event.issue.number }}
+          delete-branch: true
+          commit-message: '投稿 #${{ github.event.issue.number }}：新增题目'
+          title: '投稿 #${{ github.event.issue.number }}：${{ github.event.issue.title }}'
+          labels: contribution
+          body: |
+            由投稿自动生成，来源：#${{ github.event.issue.number }}
+
+            审核人（合并前请确认）：
+            - [ ] 答案正确，与教材/课件一致
+            - [ ] 解析讲得通，不是只重复答案
+            - [ ] 出处真实可查
+            - [ ] 不含他人课件原文、不含学生个人信息
+
+            合并后页面会自动更新。
+
+      - name: 回帖告知 PR 地址
+        if: success() && steps.cpr.outputs.pull-request-url != ''
+        uses: actions/github-script@v7
+        env:
+          PR_URL: ${{ steps.cpr.outputs.pull-request-url }}
+          PR_NUM: ${{ steps.cpr.outputs.pull-request-number }}
+        with:
+          script: |
+            const url = process.env.PR_URL;
+            const num = process.env.PR_NUM;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `已生成 PR #${num}：${url}\n\n合并后即刻生效。若长期无人合并，可以直接在 PR 里催一下。`
+            });
