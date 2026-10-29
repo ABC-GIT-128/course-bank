@@ -197,19 +197,26 @@
   function validate(q, idx) {
     const errs = [];
     const tag = '第 ' + idx + ' 题';
+
+    /* 答案写「待补」是最常见的情况（AI 规整时原文没答案），单独给一句人话 */
+    const rawAns = (q.raw && String(q.raw.ans || '')) || '';
+    const pending = /待补|待定|未知|\?|？/.test(rawAns);
+    if (pending && q.type !== 'term') {
+      errs.push(tag + '：答案是「' + rawAns.slice(0, 12) + '」，需要先补上正确答案再提交');
+    }
     if (!q.q) errs.push(tag + '：没有题干');
     if (!q.exp || q.exp.length < 8) errs.push(tag + '：缺少解析（或解析太短）');
     if (!q.ref) errs.push(tag + '：缺少出处（不阻断，但建议补上）');
 
     if (q.type === 'choice') {
       if (!Array.isArray(q.opts) || q.opts.length < 2) errs.push(tag + '：选项少于 2 个');
-      if (typeof q.ans !== 'number' || q.ans < 0 || q.ans >= (q.opts || []).length) {
+      if (!pending && (typeof q.ans !== 'number' || q.ans < 0 || q.ans >= (q.opts || []).length)) {
         errs.push(tag + '：答案要写成选项字母（A/B/C/D），当前无法识别');
       }
     }
     if (q.type === 'fill') {
       if (!q.blanks || !q.blanks.length) errs.push(tag + '：缺少答案');
-      else if (q.blankCount !== q.blanks.length) {
+      else if (!pending && q.blankCount !== q.blanks.length) {
         errs.push(tag + '：题干有 ' + q.blankCount + ' 个空，答案给了 ' + q.blanks.length + ' 组');
       }
     }
@@ -217,7 +224,7 @@
       if (!q.kw || q.kw.length < 3) errs.push(tag + '：关键词不足 3 组（用 | 分隔，或在「关键词:」里列出）');
     }
     if (q.type === 'calc') {
-      if (isNaN(q.value)) errs.push(tag + '：计算题答案要以数值开头');
+      if (!pending && isNaN(q.value)) errs.push(tag + '：计算题答案要以数值开头');
       if (!q.sol || !q.sol.length) errs.push(tag + '：计算题需要解题步骤（解析里每行一步或用 | 分隔）');
     }
     return errs;

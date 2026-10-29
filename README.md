@@ -83,7 +83,12 @@ node scripts/parse-batch.js --body-file issue.md --issue-number 33 --out .tmp/ba
 node scripts/add-question.js --json .tmp/batch.json     # 支持 { question } 与 { questions: [...] }
 ```
 
-同学手上是原始文档时，`batch.html` 底部提供一份**给 AI 的整理指令**（源文件 `templates/ai-prompt.txt`）：
+同学手上是原始文档时，`batch.html` 底部提供**两份给 AI 的指令**，按资料性质二选一（页面上可切换）：
+
+- `templates/ai-prompt.txt`：资料还不是题目 → 让 AI 改写成题目
+- `templates/ai-prompt-normalize.txt`：资料本身就是题目 → **只规整格式，不改题、不编答案**
+
+用法：
 复制它 + 把资料粘给任意大模型，模型按格式输出后直接粘回批量页校验。指令里写死了空位数、答案格式、
 关键词组数、不许编答案、不许用 Markdown 等约束——改提示词只改这一个文件，页面会自动加载最新版。
 

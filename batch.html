@@ -81,6 +81,12 @@
   .aibody pre{margin:0 0 12px;max-height:340px;overflow:auto;background:#f7f8fb;border:1px solid #e6e9f2;
     border-radius:12px;padding:12px 14px;font-size:12.5px;line-height:1.85;white-space:pre-wrap;
     font-family:ui-monospace,Menlo,Consolas,"Courier New",monospace;color:#334155}
+  .segbar{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px}
+  .segbar .seg{border:1px solid var(--line);background:#fff;color:#4b5563;border-radius:8px;
+    padding:6px 11px;font-size:12px;cursor:pointer;font-family:inherit}
+  .segbar .seg:hover{background:#eef0f6}
+  .segbar .seg.on{background:#eef2ff;border-color:#c7cdfa;color:#3730a3;font-weight:600}
+  .seghint{font-size:12px;color:#6b7280;line-height:1.75;margin:0 0 10px}
   .aibody button{border:1px solid var(--line);background:var(--accent);color:#fff;border-radius:9px;
     padding:8px 14px;font-size:12.5px;cursor:pointer;font-family:inherit;font-weight:600}
   .btoast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);opacity:0;
@@ -136,7 +142,12 @@ B. 选项二
         <span>把这段指令连同你的复习资料发给 AI，它输出的内容可以直接粘回上面的框里</span>
       </summary>
       <div class="aibody">
-        <p>适用于复习要点、课件文字、往年练习题这类原始文档。豆包 / Kimi / ChatGPT / DeepSeek 都可以，指令里已经把格式规则写死，AI 照着输出即可导入。</p>
+        <p>先选你的资料属于哪种情况，再复制对应指令（豆包 / Kimi / ChatGPT / DeepSeek 都行）：</p>
+        <div class="segbar" id="segbar">
+          <button type="button" class="seg on" data-mode="gen">原始资料 → 生成题目</button>
+          <button type="button" class="seg" data-mode="norm">已是题目 → 只规整格式</button>
+        </div>
+        <p class="seghint" id="seghint"></p>
         <pre id="aiPrompt">指令加载中…</pre>
         <button type="button" id="btnCopyPrompt">复制这份指令</button>
       </div>
