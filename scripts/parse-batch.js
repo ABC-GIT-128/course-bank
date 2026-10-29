@@ -55,13 +55,37 @@ const bodyFile = flag('body-file');
 const textFile = flag('text-file');
 
 if (bodyFile) {
-  const S = sections(fs.readFileSync(bodyFile, 'utf8'));
-  text = getByKeyword(S, '题目内容', '题目文本', '粘贴', '内容');
+  const raw = fs.readFileSync(bodyFile, 'utf8');
+  const S = sections(raw);
+
+  /* 优先取表单里的「题目内容」；没有表单结构（直接粘贴正文）就退回整份正文 */
+  text = getByKeyword(S, '题目内容', '题目文本', '粘贴');
+  if (!text) {
+    text = raw
+      .split('\n')
+      .filter(l => !/^###\s/.test(l))          /* 去掉表单小标题 */
+      .join('\n')
+      .trim();
+    console.log('（正文没有「题目内容」小节，按整份正文解析）');
+  }
+
   const courseRaw = getByKeyword(S, '所属课程');
   if (!course) {
     const m = /[（(]\s*([A-Za-z0-9_-]+)\s*[）)]/.exec(courseRaw);
     course = m ? m[1] : (courseRaw.indexOf('其它') >= 0 ? getByKeyword(S, '课程 ID', '课程ID') : courseRaw.trim());
   }
+  /* 再兜底：正文里手写的「所属课程：sensor」/「课程：sensor」 */
+  if (!course) {
+    const m2 = /(?:所属课程|课程)\s*[:：]\s*([A-Za-z0-9_-]+)/.exec(raw);
+    if (m2) { course = m2[1]; console.log('（从正文里的「' + m2[0] + '」取到课程）'); }
+  }
+
+  /* 去掉手写的元信息行（如「所属课程：linux」），免得被当成第一题的题干 */
+  text = text.split('\n')
+    .filter(l => !/^\s*(所属课程|课程|默认章节|章节)\s*[:：]/.test(l))
+    .join('\n')
+    .trim();
+
   const chRaw = getByKeyword(S, '默认章节', '章节');
   if (chRaw) defaultCh = Number(/(\d+)/.exec(chRaw)[1]) || defaultCh;
 } else if (textFile) {
@@ -74,6 +98,17 @@ if (bodyFile) {
 
 if (!text) {
   console.error('✗ 没找到「题目内容」这一栏，或者它是空的');
+  process.exit(1);
+}
+
+if (!course) {
+  const dir = path.join(__dirname, '..', 'data');
+  const ids = fs.readdirSync(dir)
+    .filter(f => f.endsWith('.js') && f !== 'courses.js' && f !== '_status.js')
+    .map(f => f.replace(/\.js$/, ''));
+  console.error('✗ 没找到「所属课程」。');
+  console.error('  请在本条 Issue 里补一行，例如：所属课程：' + (ids[0] || 'sensor'));
+  console.error('  现有课程：' + (ids.join('、') || '（还没有课程）'));
   process.exit(1);
 }
 
