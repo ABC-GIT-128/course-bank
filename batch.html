@@ -24,6 +24,19 @@
     padding:12px 13px;font-size:13.5px;line-height:1.8;font-family:ui-monospace,Menlo,Consolas,"Courier New",monospace;
     box-sizing:border-box;outline:none;background:#fcfcfe;color:var(--ink)}
   #paste:focus{border-color:#b9c0f5;background:#fff}
+  .bhelp{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 2px;padding:9px 12px;
+    border-radius:11px;background:#f7f8fb;border:1px dashed #dde2ec;font-size:12.5px;color:#4b5563;
+    transition:background .2s,border-color .2s,box-shadow .2s}
+  .bhelp.empty{background:#f5f7ff;border-color:#c7cdfa;box-shadow:0 0 0 3px rgba(79,70,229,.05)}
+  .bhelp .bk{font-weight:600;color:#1b2130;white-space:nowrap}
+  .bhelp .bstep{flex:1 1 220px;line-height:1.6;color:#6b7280}
+  .bhelp .mini{border:1px solid var(--line);background:#fff;color:#4b5563;border-radius:8px;
+    padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .bhelp .mini:hover{background:#eef0f6}
+  .bhelp .primary-mini{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .bhelp .primary-mini:hover{filter:brightness(1.06);background:var(--accent)}
+  .bhint.flash{animation:fmtflash 1.6s ease}
+  @keyframes fmtflash{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 3px rgba(79,70,229,.22)}}
   .bstat{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 4px;font-size:12.5px;color:#4b5563}
   .bstat b{color:#1b2130}
   .bstat .ok{color:#15803d}
@@ -50,7 +63,7 @@
   .bhint{font-size:12.5px;color:#6b7280;line-height:1.8;margin-top:14px;background:#f7f8fb;
     border:1px dashed #dde2ec;border-radius:12px;padding:12px 14px;white-space:pre-wrap;
     font-family:ui-monospace,Menlo,Consolas,monospace;overflow-x:auto}
-  .aibox{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  .aibox{margin-top:10px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
   .aibox summary{cursor:pointer;list-style:none;padding:13px 16px;display:flex;flex-direction:column;gap:3px}
   .aibox summary::-webkit-details-marker{display:none}
   .aibox summary b{font-size:14px;color:#1b2130}
@@ -105,24 +118,31 @@ B. 选项二
 
 【填空】2. …… ＿＿＿ ……"></textarea>
 
+    <div class="bhelp empty" id="bhelp">
+      <span class="bk">手上是原始文档？</span>
+      <span class="bstep">① 复制 AI 指令　② 连同资料发给 AI　③ 把结果粘回上面的框</span>
+      <button type="button" class="mini primary-mini" id="btnAiCopy">复制 AI 指令</button>
+      <button type="button" class="mini" id="btnFmt">看格式要求</button>
+    </div>
+
+    <details class="aibox" id="aibox">
+      <summary>
+        <b>给 AI 的整理指令（可复制）</b>
+        <span>把这段指令连同你的复习资料发给 AI，它输出的内容可以直接粘回上面的框里</span>
+      </summary>
+      <div class="aibody">
+        <p>适用于复习要点、课件文字、往年练习题这类原始文档。豆包 / Kimi / ChatGPT / DeepSeek 都可以，指令里已经把格式规则写死，AI 照着输出即可导入。</p>
+        <pre id="aiPrompt">指令加载中…</pre>
+        <button type="button" id="btnCopyPrompt">复制这份指令</button>
+      </div>
+    </details>
+
     <div class="bstat" id="stat"><span class="chip">等待粘贴…</span></div>
     <div id="errs"></div>
     <div class="blist" id="list"></div>
   </div>
 
-  <details class="aibox" id="aibox">
-    <summary>
-      <b>手上是原始文档？先让 AI 整理成这个格式</b>
-      <span>复制下面这段指令，连同你的复习资料一起发给 AI，它输出的内容可以直接粘回上面的框里</span>
-    </summary>
-    <div class="aibody">
-      <p>适用于复习要点、课件文字、往年练习题这类原始文档。豆包 / Kimi / ChatGPT / DeepSeek 都可以，指令里已经把格式规则写死，AI 照着输出即可导入。</p>
-      <pre id="aiPrompt">指令加载中…</pre>
-      <button type="button" id="btnCopyPrompt">复制这份指令</button>
-    </div>
-  </details>
-
-  <div class="bhint" id="hint"></div>
+  <div class="bhint" id="fmt"></div>
 </main>
 
 <div class="btoast" id="btoast">已复制</div>
