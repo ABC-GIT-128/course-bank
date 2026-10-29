@@ -13,7 +13,7 @@ window.OC_STATUS = {
   "version": 1,
   "updatedAt": "2026-10-28",
   "questions": {},
-  "courses": {test1: { status: 'hidden', at: '2026-10-29', by: 'admin', reason: '重复的测试课程' }，
+  "courses": {test1: { status: 'hidden', at: '2026-10-29', by: 'admin', reason: '重复的测试课程' },
               test2: { status: 'hidden', at: '2026-10-29', by: 'admin', reason: '删除测试' }
              }
 };
