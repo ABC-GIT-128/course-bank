@@ -11,6 +11,8 @@
  *   node scripts/admin.js unarchive <课程id>                 取消归档
  *   node scripts/admin.js retire [--year 2026] [--keep 2]    按窗口批量归档过期课程
  *   node scripts/admin.js log                                查看下架/归档记录
+ *   node scripts/admin.js purge <课程id> --yes                物理删除整门课程（不可恢复）
+ *   node scripts/admin.js purge-q <题目id> --course <课程id> --yes   物理删除某道题
  *
  * 设计说明：
  * - 只改 data/_status.js，不动题库内容；一条记录一行 diff，便于 review 与回溯。
@@ -162,6 +164,65 @@ switch (cmd) {
     });
     writeStatus(s);
     console.log('\n已归档。记得重新跑 build-index.js。');
+    break;
+  }
+
+  /* ---------- 物理删除：课程 ---------- */
+  case 'purge': {
+    const id = args[1];
+    if (!id) { console.log('用法：node scripts/admin.js purge <课程id> --yes'); process.exit(1); }
+    const target = findC(id);
+    if (!target) { console.log('没有这门课：' + id); break; }
+
+    if (args.indexOf('--yes') < 0) {
+      console.log('即将【物理删除】课程「' + target.course.title + '」：');
+      console.log('  · data/' + target.file + '（' + target.questions.length + ' 题）');
+      console.log('  · 短地址目录 ' + id + '/');
+      console.log('');
+      console.log('删不掉的部分（务必知道）：');
+      console.log('  · Git 历史仍保留，checkout 旧提交就能看到');
+      console.log('  · 别人 fork 的副本、已部署过的 CDN 缓存收不回');
+      console.log('  · 若涉及个人信息，需另外重写历史（git filter-repo）');
+      console.log('');
+      console.log('确认删除请加 --yes 重跑。');
+      break;
+    }
+    fs.rmSync(path.join(dir, target.file), { force: true });
+    const routeDir = path.join(__dirname, '..', id);
+    if (fs.existsSync(path.join(routeDir, 'index.html'))) {
+      fs.rmSync(routeDir, { recursive: true, force: true });
+    }
+    if (s.courses[id]) { delete s.courses[id]; writeStatus(s); }
+    console.log('已物理删除 data/' + target.file + ' 与 ' + id + '/');
+    console.log('下一步：node scripts/build-index.js && node scripts/check-data.js，然后提交');
+    break;
+  }
+
+  /* ---------- 物理删除：单题 ---------- */
+  case 'purge-q': {
+    const qid = args[1];
+    const cid = flag('course');
+    if (!qid || !cid) { console.log('用法：node scripts/admin.js purge-q <题目id> --course <课程id> --yes'); process.exit(1); }
+    const target = findC(cid);
+    if (!target) { console.log('没有这门课：' + cid); break; }
+    const hit = target.questions.find(q => q.id === qid);
+    if (!hit) { console.log('这门课里没有题目：' + qid); break; }
+
+    if (args.indexOf('--yes') < 0) {
+      console.log('即将【物理删除】' + cid + ' 的第 ' + (target.questions.indexOf(hit) + 1) + ' 题（id=' + qid + '）：');
+      console.log('  ' + String(hit.q).replace(/<[^>]+>/g, '').slice(0, 60));
+      console.log('');
+      console.log('注意：会重写 data/' + target.file + '，该文件原有排版与注释会变成标准 JSON 格式；');
+      console.log('Git 历史仍保留这一题的旧版本。确认请加 --yes。');
+      break;
+    }
+    const rest = target.questions.filter(q => q.id !== qid);
+    const oc = { course: target.course, questions: rest };
+    const head = '/* 课程数据：' + target.course.title + '\n * 由 scripts/admin.js purge-q 重写，可继续手工编辑。\n */\n';
+    fs.writeFileSync(path.join(dir, target.file), head + 'window.OC = ' + JSON.stringify(oc, null, 2) + ';\n', 'utf8');
+    if (s.questions[qid]) { delete s.questions[qid]; writeStatus(s); }
+    console.log('已删除 ' + qid + '，' + cid + ' 现有 ' + rest.length + ' 题');
+    console.log('下一步：node scripts/build-index.js && node scripts/check-data.js');
     break;
   }
 
