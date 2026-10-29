@@ -182,5 +182,37 @@ D. 电感式
   });
 
   elHint.textContent = HINT;
+
+  /* ---------- AI 指令：从 templates/ai-prompt.txt 载入，保证和仓库里那份一致 ---------- */
+  const elPrompt = $('#aiPrompt');
+  let promptText = '';
+
+  function fallbackPrompt() {
+    return '【任务】把下面的课程资料整理成题库格式，供刷题网站导入。\n\n' +
+      '1) 只用【选择】【填空】【名词】【计算】四种标记，各占一行；\n' +
+      '2) 每道题必须有：题干、（选择题的 ABCD 选项）、答案、解析、出处 五项；\n' +
+      '3) 填空的空位写 ＿＿＿（三个全角下划线），空数必须等于答案组数，多组用 | 分隔；\n' +
+      '4) 选择题答案只写一个大写字母；名词解释给 3~5 组关键词，用 | 分隔；\n' +
+      '5) 计算题答案以数值开头并带单位，解析用 | 分步；\n' +
+      '6) 不要编造答案和页码，缺答案写「答案：待补」并在末尾【未生成】里列出；\n' +
+      '7) 只输出题目文本，不要 Markdown 代码块、不要前言总结，公式用普通字符。\n\n' +
+      '下面是资料内容：\n（把你的文档粘贴在这里）';
+  }
+
+  fetch('templates/ai-prompt.txt')
+    .then(r => (r.ok ? r.text() : Promise.reject(new Error('404'))))
+    .then(t => { promptText = t.trim(); elPrompt.textContent = promptText; })
+    .catch(() => { promptText = fallbackPrompt(); elPrompt.textContent = promptText; });
+
+  $('#btnCopyPrompt').addEventListener('click', async () => {
+    if (!promptText) { toast('指令还没加载好，稍等一下'); return; }
+    try {
+      await navigator.clipboard.writeText(promptText);
+      toast('已复制，粘给 AI 即可');
+    } catch (e) {
+      toast('复制失败，请手动选择文本复制');
+    }
+  });
+
   render();
 })();

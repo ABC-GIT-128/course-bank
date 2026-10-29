@@ -80,6 +80,10 @@ node scripts/parse-batch.js --body-file issue.md --issue-number 33 --out .tmp/ba
 node scripts/add-question.js --json .tmp/batch.json     # 支持 { question } 与 { questions: [...] }
 ```
 
+同学手上是原始文档时，`batch.html` 底部提供一份**给 AI 的整理指令**（源文件 `templates/ai-prompt.txt`）：
+复制它 + 把资料粘给任意大模型，模型按格式输出后直接粘回批量页校验。指令里写死了空位数、答案格式、
+关键词组数、不许编答案、不许用 Markdown 等约束——改提示词只改这一个文件，页面会自动加载最新版。
+
 规则：题型标记 `【选择】/【填空】/【名词】/【计算】`（也认 `[选择]`、`## 选择`、`一、选择题`），
 其后每题以「答案：」收尾；同一题型可连写多题。**部分成功也入库**，跳过的题会在 Issue 回帖里逐条说明原因。
 单次建议 ≤50 题，`check-data.js` 仍会做结构与隐私校验。
