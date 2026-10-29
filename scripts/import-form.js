@@ -85,7 +85,7 @@ if (fs.existsSync(dataFile)) {
     course: {
       id: courseId, title, subtitle: '期末刷题',
       college: flag('college') || '专业基础课', teacher: '',
-      terms: [term], termLabels: { [term]: term.replace('autumn', ' 秋').replace('spring', ' 春') },
+      terms: [term], termLabels: { [term]: term.replace(/-?autumn/, ' 秋').replace(/-?spring/, ' 春').trim() },
       updatedAt: new Date().toISOString().slice(0, 10),
       license: 'CC BY-NC-SA 4.0', chapterNames: {}, keywords: [title]
     },

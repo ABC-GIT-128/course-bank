@@ -110,6 +110,7 @@ jobs:
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
           mkdir -p .tmp
           printf '%s' "$ISSUE_BODY" > .tmp/issue.md
@@ -117,7 +118,8 @@ jobs:
           if echo ",$LABELS," | grep -q ",batch,"; then
             echo "→ 批量投稿"
             node scripts/parse-batch.js --body-file .tmp/issue.md \
-                 --issue-number "$ISSUE_NUMBER" --out .tmp/batch.json > .tmp/parse.log 2>&1
+                 --issue-number "$ISSUE_NUMBER" --issue-title "$ISSUE_TITLE" \
+                 --out .tmp/batch.json > .tmp/parse.log 2>&1
           else
             echo "→ 单题投稿"
             node scripts/issue-parse.js --body-file .tmp/issue.md \
@@ -132,11 +134,15 @@ jobs:
           echo "ok=true" >> "$GITHUB_OUTPUT"
 
       - name: 写入课程数据
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
+          # 课程文件不存在时用 Issue 标题兜底建课（去掉 [批量]/[题目] 前缀）
+          TITLE=$(printf '%s' "$ISSUE_TITLE" | sed -E 's/^\[[^]]*\][[:space:]]*//')
           if [ -f .tmp/batch.json ]; then
-            node scripts/add-question.js --json .tmp/batch.json
+            node scripts/add-question.js --json .tmp/batch.json --title "$TITLE"
           else
-            node scripts/add-question.js --json .tmp/q.json
+            node scripts/add-question.js --json .tmp/q.json --title "$TITLE"
           fi
           node scripts/build-index.js
           node scripts/check-data.js

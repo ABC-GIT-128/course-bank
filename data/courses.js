@@ -73,5 +73,48 @@ window.OC_COURSES = [
     "statusAt": "",
     "outOfWindow": false,
     "newestYear": 2026
+  },
+  {
+    "id": "linux",
+    "file": "linux.js",
+    "title": "Linux 基础与交叉编译",
+    "subtitle": "期末刷题 · 选择 / 填空 / 名词解释",
+    "college": "专业选修课",
+    "terms": [
+      "2026-autumn"
+    ],
+    "termLabels": {
+      "2026-autumn": "2026 秋"
+    },
+    "updatedAt": "2026-10-29",
+    "license": "CC BY-NC-SA 4.0",
+    "chapters": [
+      1
+    ],
+    "chapterNames": {
+      "1": "交叉编译与系统构建"
+    },
+    "count": 13,
+    "hidden": 0,
+    "tags": {
+      "choice": 5,
+      "fill": 5,
+      "term": 3
+    },
+    "keywords": [
+      "Linux",
+      "交叉编译",
+      "gcc",
+      "glibc",
+      "引导编译器",
+      "内核头文件",
+      "arm-linux",
+      "Buildroot"
+    ],
+    "status": "active",
+    "statusReason": "",
+    "statusAt": "",
+    "outOfWindow": false,
+    "newestYear": 2026
   }
 ];

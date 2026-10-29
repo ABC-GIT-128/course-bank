@@ -80,6 +80,14 @@ if (bodyFile) {
     if (m2) { course = m2[1]; console.log('（从正文里的「' + m2[0] + '」取到课程）'); }
   }
 
+  /* 最后兜底：用 Issue 标题当课程 id（仅当标题是英文/数字） */
+  if (!course) {
+    const t = flag('issue-title') || '';
+    const slug = String(t).replace(/^\[[^\]]*\]\s*/, '')
+      .toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+    if (slug) { course = slug; console.log('（用 Issue 标题推出课程 id：' + slug + '）'); }
+  }
+
   /* 去掉手写的元信息行（如「所属课程：linux」），免得被当成第一题的题干 */
   text = text.split('\n')
     .filter(l => !/^\s*(所属课程|课程|默认章节|章节)\s*[:：]/.test(l))
