@@ -7,7 +7,8 @@
   const elStat = $('#stat');
   const elErrs = $('#errs');
   const elList = $('#list');
-  const elHint = $('#hint');
+  const elHint = $('#fmt');
+  const elHelp = $('#bhelp');
 
   const TYPE_CLASS = { choice: 't-choice', fill: 't-fill', term: 't-term', calc: 't-calc' };
   const SUBMIT_URL = 'https://github.com/ABC-GIT-128/course-bank/issues/new?template=batch.yml';
@@ -141,6 +142,8 @@ D. 电感式
   }
 
   elPaste.addEventListener('input', () => {
+    /* 空的时候把「手上是原始文档？」这行标成主色，一旦开始打字就降为常态 */
+    elHelp.classList.toggle('empty', !elPaste.value.trim());
     clearTimeout(timer);
     timer = setTimeout(render, 160);
   });
@@ -204,14 +207,39 @@ D. 电感式
     .then(t => { promptText = t.trim(); elPrompt.textContent = promptText; })
     .catch(() => { promptText = fallbackPrompt(); elPrompt.textContent = promptText; });
 
-  $('#btnCopyPrompt').addEventListener('click', async () => {
+  async function copyPrompt(btn) {
     if (!promptText) { toast('指令还没加载好，稍等一下'); return; }
+    const label = btn ? btn.textContent : '';
     try {
       await navigator.clipboard.writeText(promptText);
       toast('已复制，粘给 AI 即可');
+      if (btn) {
+        btn.textContent = '已复制 ✓';
+        setTimeout(() => { btn.textContent = label; }, 1800);
+      }
     } catch (e) {
-      toast('复制失败，请手动选择文本复制');
+      /* 非 HTTPS 或旧浏览器：把面板展开、选中文本，让用户手动复制 */
+      $('#aibox').open = true;
+      const pre = $('#aiPrompt');
+      const range = document.createRange();
+      range.selectNodeContents(pre);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      toast('已选中指令，按 Ctrl+C 复制');
     }
+  }
+
+  $('#btnCopyPrompt').addEventListener('click', e => copyPrompt(e.currentTarget));
+  $('#btnAiCopy').addEventListener('click', e => copyPrompt(e.currentTarget));
+
+  /* 「看格式要求」→ 平滑滚到底部格式说明并高亮一下 */
+  $('#btnFmt').addEventListener('click', () => {
+    elHint.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    elHint.classList.remove('flash');
+    void elHint.offsetWidth;      /* 重启动画 */
+    elHint.classList.add('flash');
+    setTimeout(() => elHint.classList.remove('flash'), 1700);
   });
 
   render();
