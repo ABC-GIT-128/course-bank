@@ -107,7 +107,10 @@ const rank = { active: 0, archived: 1, hidden: 2 };
 list.sort((a, b) => (rank[a.status] - rank[b.status]) || (b.count - a.count));
 
 const out = '/* 自动生成，请勿手改：node scripts/build-index.js */\n'
-  + 'window.OC_RETENTION = ' + JSON.stringify({ keepYears, cutoff, generatedYear: nowYear }) + ';\n'
+  + 'window.OC_RETENTION = ' + JSON.stringify({
+      keepYears, cutoff, generatedYear: nowYear,
+      generatedAt: new Date().toISOString()
+    }) + ';\n'
   + 'window.OC_COURSES = ' + JSON.stringify(list, null, 2) + ';\n';
 fs.writeFileSync(path.join(dir, 'courses.js'), out, 'utf8');
 

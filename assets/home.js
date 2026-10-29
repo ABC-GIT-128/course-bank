@@ -173,3 +173,16 @@
 
   render(INDEX, '');
 })();
+
+/* ---------- 页脚：显示数据构建时间，方便判断新旧 ---------- */
+(function () {
+  var el = document.getElementById('buildline');
+  if (!el) return;
+  var r = window.OC_RETENTION || {};
+  if (!r.generatedAt) return;
+  var d = new Date(r.generatedAt);
+  var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+  var s = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+          ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  el.textContent = '题库数据更新于 ' + s + '（若刚更新过看不到，刷新一次即可）';
+})();
