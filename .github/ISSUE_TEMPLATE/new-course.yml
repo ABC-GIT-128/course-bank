@@ -35,8 +35,11 @@ body:
   - type: textarea
     id: materials
     attributes:
-      label: 你手上有哪些材料
-      description: 复习要点 / 课堂 PPT / 往年题 / 笔记 —— 只描述，不要直接贴原文
+      label: 你手上有哪些材料（只描述，不上传）
+      description: |
+        复习要点 / 课堂 PPT / 往年题 / 笔记 —— 只描述有什么，不要在这里贴原文或上传附件。
+        文件请私聊或群文件发给维护者（先删掉学生名单、学号、成绩）。
+        原因：课件常带老师姓名、学校模板、教材插图，公开仓库的提交历史删不掉。
   - type: textarea
     id: help
     attributes:
