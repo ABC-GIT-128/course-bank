@@ -96,6 +96,13 @@ node scripts/add-question.js --json .tmp/batch.json     # 支持 { question } �
 其后每题以「答案：」收尾；同一题型可连写多题。**部分成功也入库**，跳过的题会在 Issue 回帖里逐条说明原因。
 单次建议 ≤50 题，`check-data.js` 仍会做结构与隐私校验。
 
+### 发布与追溯
+
+- 每次部署生成 `data/build-info.json`（commit / 时间），首页页脚显示版本号，用于核对"看到的是不是最新一次部署"
+- 下架内容不会进入发布产物：`scripts/prune-build.js` 在部署前裁剪（见"日常运维"）
+- PR 描述含 `Closes #N`，合并后自动关闭来源 Issue；`merge-note.yml` 会在 Issue 里留下"已上线 + 版本号"
+- Actions 全部固定到提交 SHA；`main` 已开启分支保护（禁强推、禁删除）
+
 ### 仓库配置（已完成，换仓库时照抄）
 
 当前仓库已经配好，下面是等价的命令行版本，换账号/换仓库时可以复用：
