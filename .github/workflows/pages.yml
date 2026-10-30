@@ -46,6 +46,10 @@ jobs:
             fi
           done
 
+      # 真正删除下架内容：下架课程的 data 文件不进产物，短地址页换成静态提示页
+      - name: 裁剪下架内容
+        run: node scripts/prune-build.js .build
+
       # 给静态资源加版本号：穿透浏览器与 Service Worker 缓存
       - name: 加缓存版本号
         run: node scripts/stamp-version.js .build

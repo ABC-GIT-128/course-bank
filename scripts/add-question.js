@@ -33,8 +33,22 @@ if (!courseId || !list.length) {
   process.exit(1);
 }
 
+
+/* 课程 id 只允许小写字母/数字/-/_，防止路径穿越写到 data/ 之外 */
+function assertCourseId(id) {
+  if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(String(id || ''))) {
+    console.error('✗ 非法课程 ID：' + id + '（只允许小写字母、数字、- 和 _）');
+    process.exit(1);
+  }
+}
+
 const dataDir = path.join(__dirname, '..', 'data');
+assertCourseId(courseId);
 const file = path.join(dataDir, courseId + '.js');
+if (path.dirname(path.resolve(file)) !== path.resolve(dataDir)) {
+  console.error('✗ 课程 ID 越界：' + courseId);
+  process.exit(1);
+}
 
 /* ---------- 课程不存在：建一个新文件 ---------- */
 if (!fs.existsSync(file)) {

@@ -31,7 +31,7 @@ const BANK = window.OC.questions.filter(function (q) {
   }
   if(st === 'hidden' && list){
     window.__OC_BLOCKED = true;
-    list.innerHTML = '<div class="empty">本课程已下架' + (ov && ov.reason ? '（' + ov.reason + '）' : '') +
+    list.innerHTML = '<div class="empty">本课程已下架' + (ov && ov.reason ? '（' + esc(ov.reason) + '）' : '') +
       '<br><a href="index.html">返回全部课程</a></div>';
   }
 })();
@@ -45,6 +45,11 @@ BANK.forEach(q => byId[q.id] = q);
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+/* 题库内容一律当纯文本处理：先转义，再只放行这几个无属性标签。
+ * 这样 <img onerror=…> 会原样显示成文本，而 <b> 加粗、<p> 分段仍然保留。 */
+const ALLOWED_TAG = /&lt;(\/?)(p|br|b|i|sub|sup)(\/?)&gt;/gi;
+const rich = s => esc(s).replace(ALLOWED_TAG, (m, close, tag, slash) => '<' + close + tag.toLowerCase() + slash + '>');
 const TYPE_NAME = {choice:'单项选择', fill:'填空题', term:'名词解释', calc:'计算题', note:'待确认'};
 const TYPE_KEY  = {choice:'t-choice', fill:'t-fill', term:'t-term', calc:'t-calc', note:'t-note'};
 
@@ -158,29 +163,29 @@ function renderChips(){
 function solHTML(q){
   let h = '';
   if(q.type === 'note'){
-    h += q.exp || '';
+    h += rich(q.exp || '');
   } else if(q.type === 'choice'){
-    h += '<h5>正确答案</h5><div class="answ">' + 'ABCD'[q.ans] + '. ' + q.opts[q.ans] + '</div>';
-    h += '<h5>解析</h5>' + q.exp;
+    h += '<h5>正确答案</h5><div class="answ">' + 'ABCD'[q.ans] + '. ' + rich(q.opts[q.ans]) + '</div>';
+    h += '<h5>解析</h5>' + rich(q.exp);
   } else if(q.type === 'fill'){
     h += '<h5>标准答案</h5><div class="answ">' +
-      q.blanks.map((b,i) => '第' + (i+1) + '空：' + b[0]).join('　　') + '</div>';
-    h += '<h5>解析</h5>' + q.exp;
+      q.blanks.map((b,i) => '第' + (i+1) + '空：' + esc(b[0])).join('　　') + '</div>';
+    h += '<h5>解析</h5>' + rich(q.exp);
   } else if(q.type === 'term'){
-    h += '<h5>参考要点</h5>' + q.exp;
+    h += '<h5>参考要点</h5>' + rich(q.exp);
     const rec = state.rec[q.id];
     if(rec && rec.detail){
       h += '<div class="kw">' + q.kw.map((g,i) =>
-        '<span class="kwt ' + (rec.detail[i]?'hit':'miss') + '">' + (rec.detail[i]?'✓ ':'✕ ') + g[0] + '</span>').join('') + '</div>';
+        '<span class="kwt ' + (rec.detail[i]?'hit':'miss') + '">' + (rec.detail[i]?'✓ ':'✕ ') + esc(g[0]) + '</span>').join('') + '</div>';
     } else {
-      h += '<div class="kw">' + q.kw.map(g => '<span class="kwt">' + g[0] + '</span>').join('') + '</div>';
+      h += '<div class="kw">' + q.kw.map(g => '<span class="kwt">' + esc(g[0]) + '</span>').join('') + '</div>';
     }
   } else if(q.type === 'calc'){
-    h += '<h5>正确答案</h5><div class="answ">' + q.ansText + '</div>';
-    h += '<h5>解析</h5>' + q.exp;
-    if(q.sol) h += '<h5>解题步骤</h5>' + q.sol.map(s => '<div class="step">' + s + '</div>').join('');
+    h += '<h5>正确答案</h5><div class="answ">' + rich(q.ansText) + '</div>';
+    h += '<h5>解析</h5>' + rich(q.exp);
+    if(q.sol) h += '<h5>解题步骤</h5>' + q.sol.map(s => '<div class="step">' + rich(s) + '</div>').join('');
   }
-  if(q.ref) h += '<div class="ref">知识依据：<b>' + q.ref + '</b></div>';
+  if(q.ref) h += '<div class="ref">知识依据：<b>' + rich(q.ref) + '</b></div>';
   return h;
 }
 
@@ -190,10 +195,10 @@ function cardHTML(q, i){
   let h = '<article class="card' + (rec ? (rec.ok ? ' is-ok ansd' : ' is-bad ansd') : '') + (isOpen ? ' open' : '') + '" data-id="' + q.id + '">';
   h += '<div class="qmeta"><span class="idx">Q' + (i+1) + '</span>' +
        '<span class="tag ' + TYPE_KEY[q.type] + '">' + TYPE_NAME[q.type] + '</span>' +
-       '<span class="tag ch">第' + q.ch + '章</span>' +
+       '<span class="tag ch">第' + esc(q.ch) + '章</span>' +
        (q.src === 'ppt' ? '<span class="tag t-ppt">PPT 专节</span>' : '') +
        (q.src === 'key' ? '<span class="tag t-note">重点</span>' : '') + '</div>';
-  h += '<div class="qtext">' + q.q.replace(/＿{3}/g, '<span class="bk"></span>') + '</div>';
+  h += '<div class="qtext">' + rich(q.q).replace(/＿{3}/g, '<span class="bk"></span>') + '</div>';
 
   if(q.type === 'note'){
     h += '<div class="notebox"><b>为什么归不进填空/名词解释：</b>' + (q.why || '') + '</div>';
@@ -212,7 +217,7 @@ function cardHTML(q, i){
         else if(rec.user === k) cls += ' bad';
       }
       const mk = rec ? (k === q.ans ? '<span class="mk">✓</span>' : (rec.user === k ? '<span class="mk">✕</span>' : '')) : '';
-      h += '<div class="' + cls + '" data-i="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + o + '</span>' + mk + '</div>';
+      h += '<div class="' + cls + '" data-i="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + rich(o) + '</span>' + mk + '</div>';
     });
     h += '</div>';
   }
@@ -237,7 +242,7 @@ function cardHTML(q, i){
   }
 
   if(q.type === 'calc'){
-    h += '<div class="hintline">只需填写数值' + (q.unit ? '（单位 ' + q.unit + '）' : '') +
+    h += '<div class="hintline">只需填写数值' + (q.unit ? '（单位 ' + esc(q.unit) + '）' : '') +
       '，允许 ' + Math.round((q.tol || .03)*100) + '% 误差</div>' +
       '<input class="numinput" id="ci-' + q.id + '" placeholder="输入计算结果…"' +
       (rec ? ' readonly value="' + esc(rec.user == null ? '' : rec.user) + '"' : '') + '>';
