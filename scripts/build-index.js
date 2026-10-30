@@ -81,7 +81,7 @@ for (const f of files) {
   list.push({
     id: c.id,
     file: f,
-    title: c.title,
+    title: cleanTitle(c.title),
     subtitle: c.subtitle || '',
     college: c.college || '未分类',
     terms: terms,
@@ -122,6 +122,23 @@ console.log(`已生成 data/courses.js：${list.length} 门课程，${list.reduc
 if (arc.length) console.log('  归档：' + arc.map(c => c.title + '(' + c.newestYear + ')').join('、'));
 if (hid.length) console.log('  下架：' + hid.map(c => c.title).join('、'));
 
+
+/* 课程标题来自 Issue 标题（用户可控），进 HTML / 注释 / 文件名前必须清洗 + 转义 */
+function cleanTitle(s) {
+  return String(s == null ? '' : s)
+    .replace(/<[^>]*>/g, '')          /* 去掉标签 */
+    .replace(/[*\/\\<>|"']/g, '')     /* 去掉会破坏注释 / 标题 / 路径的字符 */
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 60) || '未命名课程';
+}
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 /* ==================== 课程短地址：/sensor/ ====================
  * 每门课生成一个目录，里面是固定了课程 id 的刷题页。
  * 这样链接是 /course-bank/sensor/，比 quiz.html?course=sensor 好记。
@@ -147,7 +164,7 @@ function buildRoute(c) {
       '<script>window.OC_COURSE_ID = ' + JSON.stringify(c.id) + ';</script>\n' + anchor);
   }
   /* 3) 静态标题（JS 也会再改一次，主要是给分享卡片用） */
-  html = html.replace(/<title>[^<]*<\/title>/, '<title>' + c.title + ' · 刷题</title>');
+  html = html.replace(/<title>[^<]*<\/title>/, () => '<title>' + escapeHtml(cleanTitle(c.title)) + ' · 刷题</title>');
 
   const d = path.join(ROOT, c.id);
   fs.mkdirSync(d, { recursive: true });

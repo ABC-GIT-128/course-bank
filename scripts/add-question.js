@@ -42,6 +42,17 @@ function assertCourseId(id) {
   }
 }
 
+/* 标题来自 Issue 标题（用户可控）：去标签、去破坏性字符、去控制字符、限长 */
+function cleanTitle(x) {
+  return String(x == null ? '' : x)
+    .replace(/<[^>]*>/g, '')
+    .replace(/[\u002a\u002f\u005c\u007c]/g, ' ')
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 60);
+}
+
 const dataDir = path.join(__dirname, '..', 'data');
 assertCourseId(courseId);
 const file = path.join(dataDir, courseId + '.js');
@@ -52,7 +63,7 @@ if (path.dirname(path.resolve(file)) !== path.resolve(dataDir)) {
 
 /* ---------- 课程不存在：建一个新文件 ---------- */
 if (!fs.existsSync(file)) {
-  const title = flag('title') || payload.title;
+  const title = cleanTitle(flag('title') || payload.title);
   if (!title) {
     console.error('data/' + courseId + '.js 不存在，创建需要 --title');
     process.exit(1);
@@ -76,7 +87,8 @@ if (!fs.existsSync(file)) {
     },
     questions: list
   };
-  const head = '/* 课程数据：' + title + '\n * 由投稿自动生成（scripts/add-question.js），可继续手工编辑。\n */\n';
+  // 不把用户提供的标题写进注释：标题里若含注释结束符，会把后续内容变成可执行代码
+  const head = '/* 课程数据（由投稿自动生成，scripts/add-question.js）\n * 可继续手工编辑；标题见 window.OC.course.title。\n */\n';
   fs.writeFileSync(file, head + 'window.OC = ' + JSON.stringify(OC, null, 2) + ';\n', 'utf8');
   console.log('✓ 已新建 data/' + courseId + '.js，含 ' + list.length + ' 题');
   process.exit(0);

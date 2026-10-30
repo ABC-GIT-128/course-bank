@@ -115,7 +115,7 @@ D. 电感式
 
     if (r.errors.length) {
       elErrs.innerHTML = '<div class="berr"><h4>下面这些题还不能入库，改一下就能识别：</h4><ul>' +
-        r.errors.map(e => '<li>' + e.msg.join('<br>') +
+        r.errors.map(e => '<li>' + e.msg.map(escapeHtml).join('<br>') +
           (e.stem ? '<br><span style="color:#9ca3af">原文：' + escapeHtml(e.stem) + '…</span>' : '') +
           '</li>').join('') +
         '</ul></div>';
