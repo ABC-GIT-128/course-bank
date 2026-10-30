@@ -185,4 +185,9 @@
   var s = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
           ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   el.textContent = '题库数据更新于 ' + s + '（若刚更新过看不到，刷新一次即可）';
+  /* 有构建版本号就带上，方便核对是不是最新一次部署 */
+  fetch('data/build-info.json', { cache: 'no-store' })
+    .then(r => (r.ok ? r.json() : null))
+    .then(v => { if (v && v.commit) el.textContent = '题库数据更新于 ' + s + ' · 版本 ' + v.commit; })
+    .catch(() => {});
 })();

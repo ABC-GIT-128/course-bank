@@ -75,6 +75,11 @@ targets.forEach(f => {
 /* 让首页页脚能显示「数据更新于」 */
 const verFile = path.join(dir, 'data', 'build-info.json');
 fs.mkdirSync(path.dirname(verFile), { recursive: true });
-fs.writeFileSync(verFile, JSON.stringify({ stamp, at: now.toISOString() }, null, 2) + '\n', 'utf8');
+const sha = process.env.GITHUB_SHA || process.env.GIT_SHA || '';
+fs.writeFileSync(verFile, JSON.stringify({
+  stamp, at: now.toISOString(),
+  commit: sha ? sha.slice(0, 7) : '',
+  ref: process.env.GITHUB_REF_NAME || ''
+}, null, 2) + '\n', 'utf8');
 
 console.log(`✓ 已加版本号 v=${stamp}（${human}），共 ${total} 处，涉及 ${targets.length} 个页面`);
