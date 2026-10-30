@@ -134,6 +134,31 @@ function stats(){
   return {ans, ok, bad:ans-ok, total};
 }
 function refreshStats(){
+  /* 错题本模式：给一个"重练全部错题"的入口（只清错题，不动其他进度） */
+  var retryAll = document.getElementById('retryAllBtn');
+  var wrongN = Object.keys(state.wrongSet || {}).length;
+  if(state.mode === 'wrong' && wrongN){
+    if(!retryAll){
+      retryAll = document.createElement('button');
+      retryAll.id = 'retryAllBtn';
+      retryAll.className = 'tg retry';
+      retryAll.style.marginLeft = '10px';
+      retryAll.textContent = '重练全部错题';
+      retryAll.onclick = function(){
+        if(!confirm('把这 ' + wrongN + ' 道错题的记录清掉，重新做一遍？其他题的进度不受影响。')) return;
+        Object.keys(state.wrongSet).forEach(function(k){ delete state.rec[k]; });
+        state.wrongSet = {};
+        save(); buildList(); renderAll();
+        toast(true, '错题已重置，开始重练');
+      };
+      var bar = document.getElementById('stat');
+      if(bar) bar.appendChild(retryAll);
+    }
+    retryAll.textContent = '重练全部错题（' + wrongN + '）';
+  } else if(retryAll){
+    retryAll.remove();
+  }
+
   const s = stats();
   const rate = s.ans ? Math.round(s.ok/s.ans*100) + '%' : '—';
   $('#stat').innerHTML = window.innerWidth < 600
@@ -201,8 +226,10 @@ function cardHTML(q, i){
   h += '<div class="qtext">' + rich(q.q).replace(/＿{3}/g, '<span class="bk"></span>') + '</div>';
 
   if(q.type === 'note'){
-    h += '<div class="notebox"><b>为什么归不进填空/名词解释：</b>' + (q.why || '') + '</div>';
+    h += '<div class="notebox"><b>为什么归不进填空/名词解释：</b>' + esc(q.why || '') + '</div>';
     h += '<div class="solbar"><button class="tg" data-act="toggle">提示与解析 <i>▼</i></button></div>';
+
+
     h += '<div class="sol' + (isOpen ? ' open' : '') + '">' + solHTML(q) + '</div>';
     h += '</article>';
     return h;
@@ -259,7 +286,9 @@ function cardHTML(q, i){
         '<span class="r">看下方解析订正</span></div>';
   }
 
-  h += '<div class="solbar"><button class="tg" data-act="toggle">提示与解析 <i>▼</i></button></div>';
+  h += '<div class="solbar">' +
+       (rec ? '<button class="tg retry" data-act="retry">重新作答</button>' : '') +
+       '<button class="tg" data-act="toggle">提示与解析 <i>▼</i></button></div>';
   h += '<div class="sol' + (isOpen ? ' open' : '') + '">' + solHTML(q) + '</div>';
   h += '</article>';
   return h;
@@ -352,6 +381,20 @@ $('#list').addEventListener('click', e => {
     card.querySelector('.sol').classList.toggle('open', !!state.open[q.id]);
     return;
   }
+  /* 单题重练：只清这一题的记录，其他题不受影响 */
+  if(e.target.closest('[data-act="retry"]')){
+    delete state.rec[q.id];
+    delete state.open[q.id];
+    save();
+    const idx = state.list.findIndex(x => x.id === q.id);
+    const tmp = document.createElement('div');
+    tmp.innerHTML = cardHTML(q, idx);
+    card.replaceWith(tmp.firstElementChild);
+    renderChips(); refreshStats();
+    toast(true, '已重置这一题，可以重新作答');
+    return;
+  }
+
   if(state.rec[q.id]) return;
 
   const opt = e.target.closest('.opt');

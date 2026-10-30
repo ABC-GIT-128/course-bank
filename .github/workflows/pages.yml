@@ -24,6 +24,10 @@ jobs:
         with:
           node-version: 20
 
+      # 安全回归：恶意标题/题目不得以可执行形式进入产物
+      - name: 安全回归测试
+        run: node scripts/test-security.js
+
       # 部署前重建索引并校验：宁可这次不发布，也不要把坏数据推上线
       # 注意：data/courses.js 是产物、不入库，就是在这里现生成的
       - name: 校验数据

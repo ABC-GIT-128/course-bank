@@ -12,7 +12,8 @@
     "import": "node scripts/import-form.js",
     "admin": "node scripts/admin.js",
     "parse": "node scripts/issue-parse.js",
-    "add": "node scripts/add-question.js"
+    "add": "node scripts/add-question.js",
+    "test:sec": "node scripts/test-security.js"
   },
   "license": "MIT"
 }

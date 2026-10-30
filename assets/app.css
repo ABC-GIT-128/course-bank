@@ -310,3 +310,17 @@ body.home main.wrap{flex:1}
 #instChip button[data-act=go]{background:#fff;color:#1b2130;font-weight:600}
 #instChip button[data-act=no]{background:transparent;color:#c3c9d6;padding:5px 7px;font-size:14px}
 @media(max-width:420px){#instChip{font-size:12px;bottom:10px}}
+
+/* 重练按钮：与"提示与解析"并列，弱化处理 */
+.solbar{gap:8px}
+.tg.retry{background:#eef2ff;color:#3730a3}
+.tg.retry:hover{background:#e0e7ff}
+
+/* 移动端触控面积：主要按钮抬到 38~44px，避免单手误触 */
+@media(max-width:600px){
+  .tg{min-height:38px;padding:8px 14px}
+  .chip{min-height:34px;display:inline-flex;align-items:center}
+  .sub{min-height:44px}
+  .opt{min-height:44px}
+  #retryAllBtn{margin-top:6px}
+}
