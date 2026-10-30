@@ -177,9 +177,17 @@ D. 电感式
     if (!elPaste.value.trim()) { toast('先把题目粘进来'); return; }
     const r = window.OCParse.parseBatch(elPaste.value, { idPrefix: 'p' });
     if (r.errors.length) {
-      toast('还有 ' + r.errors.length + ' 题格式不对，先改一下');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+      if (!r.questions.length) {
+        toast('全部 ' + r.errors.length + ' 题都有格式问题，先改一下');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      /* 与入库口径一致：允许「部分成功」，但要先说清会跳过几题 */
+      const ok = window.confirm(
+        '有 ' + r.errors.length + ' 题格式不对（会被跳过），' + r.questions.length + ' 题可入库。\n\n' +
+        '继续提交的话，只有这 ' + r.questions.length + ' 题会进题库；跳过的题请改好后另发一条。\n\n确定提交吗？'
+      );
+      if (!ok) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
     }
     /* 先把文本放进剪贴板，再打开表单——省掉用户手动复制粘贴 */
     let copied = false;

@@ -120,6 +120,17 @@ if (!course) {
   process.exit(1);
 }
 
+
+/* 课程 id 只允许小写字母/数字/-/_，防止路径穿越写到 data/ 之外 */
+function assertCourseId(id) {
+  if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(String(id || ''))) {
+    console.error('✗ 非法课程 ID：' + id + '（只允许小写字母、数字、- 和 _）');
+    process.exit(1);
+  }
+}
+
+if (course) assertCourseId(course);
+
 const issueNumber = flag('issue-number') || '0';
 const idPrefix = 'b' + (issueNumber !== '0' ? issueNumber + '-' : '');
 
