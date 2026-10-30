@@ -1,0 +1,65 @@
+name: 合并后回帖并归档 Issue
+
+# PR 合并后：在来源 Issue 里留一条「已上线 + 数据版本」，并确保 Issue 关闭。
+# 与 PR 描述里的 `Closes #N` 互补 —— 那是自动关闭，这里是留痕。
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  note:
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'contribution')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = pr.body || '';
+
+            /* 从 PR 描述里找来源 Issue：优先 Closes #N，其次「来源：#N」 */
+            let num = null;
+            let m = /(?:closes|fixes|resolves)\s+#(\d+)/i.exec(body);
+            if (m) num = Number(m[1]);
+            if (!num) {
+              m = /来源[:：]\s*#(\d+)/.exec(body);
+              if (m) num = Number(m[1]);
+            }
+            if (!num) {
+              core.info('PR 描述里没有来源 Issue，跳过');
+              return;
+            }
+
+            const sha = (context.payload.pull_request.merge_commit_sha || '').slice(0, 7);
+            const lines = [
+              '✅ 已合并上线' + (sha ? '（数据版本 `' + sha + '`）' : '') + '。',
+              '',
+              '- 合并 PR：' + pr.html_url,
+              '- 约 30 秒后生效；如果页面还是旧的，刷新一次（部署时会给资源换版本号）。',
+              '',
+              '如果这批题里有被跳过的，请按之前的提示另开一条投稿。'
+            ];
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: num,
+              body: lines.join('\n')
+            });
+
+            /* Closes 关键字失效时兜底关闭 */
+            try {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: num,
+                state: 'closed'
+              });
+            } catch (e) {
+              core.warning('关闭 Issue 失败：' + e.message);
+            }

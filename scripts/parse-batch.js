@@ -94,6 +94,20 @@ if (bodyFile) {
     .join('\n')
     .trim();
 
+  /* 版权确认：模板要求两项都勾；手工建的 Issue 没有这一节，只提示不拦 */
+  const promiseRaw = getByKeyword(S, '版权确认', '版权');
+  if (promiseRaw) {
+    const checked = (promiseRaw.match(/-\s*\[[xX]\]/g) || []).length;
+    if (checked < 2) {
+      console.error('✗ 版权确认没勾全（当前 ' + checked + '/2 项）');
+      console.error('  请在 Issue 表单里把两个确认都勾上后重新提交，或由维护者手工确认后处理。');
+      process.exit(1);
+    }
+    console.log('版权确认：两项均已勾选');
+  } else {
+    console.log('⚠ 未检测到「版权确认」小节（可能是手工建的 Issue），请人工确认版权与个人信息');
+  }
+
   const chRaw = getByKeyword(S, '默认章节', '章节');
   if (chRaw) defaultCh = Number(/(\d+)/.exec(chRaw)[1]) || defaultCh;
 } else if (textFile) {
