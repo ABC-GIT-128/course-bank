@@ -134,31 +134,6 @@ function stats(){
   return {ans, ok, bad:ans-ok, total};
 }
 function refreshStats(){
-  /* 错题本模式：给一个"重练全部错题"的入口（只清错题，不动其他进度） */
-  var retryAll = document.getElementById('retryAllBtn');
-  var wrongN = Object.keys(state.wrongSet || {}).length;
-  if(state.mode === 'wrong' && wrongN){
-    if(!retryAll){
-      retryAll = document.createElement('button');
-      retryAll.id = 'retryAllBtn';
-      retryAll.className = 'tg retry';
-      retryAll.style.marginLeft = '10px';
-      retryAll.textContent = '重练全部错题';
-      retryAll.onclick = function(){
-        if(!confirm('把这 ' + wrongN + ' 道错题的记录清掉，重新做一遍？其他题的进度不受影响。')) return;
-        Object.keys(state.wrongSet).forEach(function(k){ delete state.rec[k]; });
-        state.wrongSet = {};
-        save(); buildList(); renderAll();
-        toast(true, '错题已重置，开始重练');
-      };
-      var bar = document.getElementById('stat');
-      if(bar) bar.appendChild(retryAll);
-    }
-    retryAll.textContent = '重练全部错题（' + wrongN + '）';
-  } else if(retryAll){
-    retryAll.remove();
-  }
-
   const s = stats();
   const rate = s.ans ? Math.round(s.ok/s.ans*100) + '%' : '—';
   $('#stat').innerHTML = window.innerWidth < 600
@@ -168,6 +143,43 @@ function refreshStats(){
       ' · 正确率 <b>' + rate + '</b>';
   $('#bar').style.width = (s.total ? s.ans/s.total*100 : 0) + '%';
   $('#wrongN').textContent = Object.keys(state.wrongSet).length;
+
+  /* 必须放在 innerHTML 之后：否则刚插进去的按钮会被整段覆盖掉 */
+  syncRetryAll();
+}
+
+/* 错题本模式下的「重练全部错题」入口：只清错题记录，不影响其他进度 */
+function syncRetryAll(){
+  const wrongN = Object.keys(state.wrongSet || {}).length;
+  const show = state.mode === 'wrong' && wrongN > 0;
+  let btn = document.getElementById('retryAllBtn');
+
+  if(!show){
+    if(btn) btn.remove();
+    return;
+  }
+  if(!btn){
+    btn = document.createElement('button');
+    btn.id = 'retryAllBtn';
+    btn.className = 'tg retry';
+    btn.style.marginLeft = '10px';
+    btn.addEventListener('click', () => {
+      const n = Object.keys(state.wrongSet || {}).length;
+      if(!n) return;
+      if(!confirm('把这 ' + n + ' 道错题的记录清掉，重新做一遍？其他题的进度不受影响。')) return;
+      Object.keys(state.wrongSet).forEach(k => { delete state.rec[k]; });
+      state.wrongSet = {};
+      save(); buildList(); renderAll();
+      toast(true, '错题已重置，开始重练');
+    });
+    const bar = document.getElementById('stat');
+    if(bar) bar.appendChild(btn);
+  } else if(!btn.isConnected){
+    /* innerHTML 重绘后节点被摘掉，重新挂回去 */
+    const bar = document.getElementById('stat');
+    if(bar) bar.appendChild(btn);
+  }
+  btn.textContent = '重练全部错题（' + wrongN + '）';
 }
 function renderChips(){
   const c = {all:BANK.length, choice:0, fill:0, term:0, calc:0};

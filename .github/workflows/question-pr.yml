@@ -133,6 +133,10 @@ jobs:
           fi
           echo "ok=true" >> "$GITHUB_OUTPUT"
 
+      # 入库前自检：安全回归（恶意标题/题目不得以可执行形式进入产物）
+      - name: 入库前安全自检
+        run: node scripts/test-security.js
+
       - name: 写入课程数据
         env:
           ISSUE_TITLE: ${{ github.event.issue.title }}
@@ -158,6 +162,9 @@ jobs:
             echo '```'
             cat .tmp/parse.log
             echo '```'
+            echo
+            echo "- 审核内容指纹：\`$(sha256sum .tmp/issue.md | cut -c1-12)\`"
+            echo "  （Issue 若在审核后被再次编辑，正文会变、指纹对不上，请重新核对）"
             echo
             echo '### 合并前请确认'
             echo '- [ ] 答案正确，与教材/课件一致'

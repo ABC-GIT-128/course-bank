@@ -7,6 +7,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const cf = require('./course-file.js');
 
 const args = process.argv.slice(2);
 const flag = n => {
@@ -15,7 +16,7 @@ const flag = n => {
 };
 
 const id = flag('id');
-const title = flag('title');
+const title = cf.cleanTitle(flag('title'));
 if (!id || !title) {
   console.log(`用法：node scripts/new-course.js --id <课程id> --title <课程名> [--college 专业基础课] [--term 2026-autumn] [--chapters "1:概述,2:基本特性"]
 
@@ -24,10 +25,10 @@ if (!id || !title) {
   process.exit(1);
 }
 
-const college = flag('college') || '专业基础课';
+const college = cf.cleanTitle(flag('college')) || '专业基础课';
 const term = flag('term') || (new Date().getFullYear() + '-autumn');
 const label = term.replace(/-?autumn/, ' 秋').replace(/-?spring/, ' 春').trim();
-const file = path.join(__dirname, '..', 'data', id + '.js');
+const file = cf.coursePath(id);   // 内含 id 白名单与越界检查
 
 if (fs.existsSync(file)) {
   console.error('文件已存在：data/' + id + '.js');
@@ -44,42 +45,37 @@ if (!Object.keys(chNames).length) { chNames[1] = '第一章'; }
 
 const today = new Date().toISOString().slice(0, 10);
 
-const content = `/* 课程数据：${title}
- * 由 scripts/new-course.js 生成，可以直接编辑。
- * 题目字段说明见 README.md「数据格式」。
- * 加完题目后运行：node scripts/build-index.js && node scripts/check-data.js
- */
-window.OC = {
+const firstCh = Number(Object.keys(chNames)[0]) || 1;
+const OC = {
   course: {
-    id: '${id}',
-    title: '${title}',
+    id,
+    title,
     subtitle: '期末刷题',
-    college: '${college}',
+    college,
     teacher: '',
-    terms: ['${term}'],
-    termLabels: { '${term}': '${label}' },
-    updatedAt: '${today}',
+    terms: [term],
+    termLabels: { [term]: label },
+    updatedAt: today,
     license: 'CC BY-NC-SA 4.0',
-    chapterNames: ${JSON.stringify(chNames)},
-    keywords: ['${title}', ${Object.values(chNames).map(v => `'${v}'`).join(', ')}]
+    chapterNames: chNames,
+    keywords: [title].concat(Object.values(chNames))
   },
   questions: [
     /* 示例题目：改成你的内容，或整条删掉 */
     {
-      id: '${id}-001',
+      id: id + '-001',
       type: 'choice',
-      ch: ${Object.keys(chNames)[0]},
+      ch: firstCh,
       q: '在这里写题干（  ）。',
       opts: ['选项 A', '选项 B', '选项 C', '选项 D'],
       ans: 0,
       exp: '<p>在这里写解析：为什么选这个，其它选项错在哪。</p>',
-      ref: '第${Object.keys(chNames)[0]}章 出处'
+      ref: '第' + firstCh + '章 出处'
     }
   ]
 };
-`;
+cf.writeCourse(id, OC);
 
-fs.writeFileSync(file, content, 'utf8');
 console.log('已创建 data/' + id + '.js');
 console.log('\n下一步：');
 console.log('  1. 编辑这个文件，把示例题换成你的题目（或跑 import-form.js 从表格导入）');

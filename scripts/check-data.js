@@ -29,6 +29,8 @@ function walk(v, cb) {
 }
 
 let total = 0;
+const idOwners = new Map();   /* 题目 id → 课程文件，用于跨课程查重 */
+
 for (const f of files) {
   const code = fs.readFileSync(path.join(dir, f), 'utf8');
   const win = {};
@@ -53,7 +55,16 @@ for (const f of files) {
     total++;
     if (!q.id) errors.push(`${tag}: 缺少 id`);
     else if (ids.has(q.id)) errors.push(`${tag}: id 重复`);
-    else ids.add(q.id);
+    else {
+      ids.add(q.id);
+      /* _status.js 的题目级下架只按 id 记录，跨课程同 id 会互相影响 */
+      const owner = idOwners.get(q.id);
+      if (owner && owner !== f) {
+        errors.push(`${tag}: 题目 id 与 ${owner} 重复（跨课程同 id 会让下架互相影响）`);
+      } else {
+        idOwners.set(q.id, f);
+      }
+    }
 
     if (!TYPES.includes(q.type)) errors.push(`${tag}: type 非法（${q.type}）`);
     if (typeof q.ch !== 'number' && typeof q.ch !== 'string') errors.push(`${tag}: 缺少 ch`);

@@ -8,6 +8,7 @@
  * 输入 JSON：{ "course": "sensor", "title": "", "question": { ... } }
  */
 const fs = require('fs');
+const cf = require('./course-file.js');
 const path = require('path');
 
 const args = process.argv.slice(2);
@@ -34,32 +35,11 @@ if (!courseId || !list.length) {
 }
 
 
-/* 课程 id 只允许小写字母/数字/-/_，防止路径穿越写到 data/ 之外 */
-function assertCourseId(id) {
-  if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(String(id || ''))) {
-    console.error('✗ 非法课程 ID：' + id + '（只允许小写字母、数字、- 和 _）');
-    process.exit(1);
-  }
-}
-
-/* 标题来自 Issue 标题（用户可控）：去标签、去破坏性字符、去控制字符、限长 */
-function cleanTitle(x) {
-  return String(x == null ? '' : x)
-    .replace(/<[^>]*>/g, '')
-    .replace(/[\u002a\u002f\u005c\u007c]/g, ' ')
-    .replace(/[\u0000-\u001f\u007f]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 60);
-}
+const assertCourseId = cf.assertCourseId;
+const cleanTitle = cf.cleanTitle;
 
 const dataDir = path.join(__dirname, '..', 'data');
-assertCourseId(courseId);
-const file = path.join(dataDir, courseId + '.js');
-if (path.dirname(path.resolve(file)) !== path.resolve(dataDir)) {
-  console.error('✗ 课程 ID 越界：' + courseId);
-  process.exit(1);
-}
+const file = cf.coursePath(courseId);
 
 /* ---------- 课程不存在：建一个新文件 ---------- */
 if (!fs.existsSync(file)) {
@@ -87,9 +67,7 @@ if (!fs.existsSync(file)) {
     },
     questions: list
   };
-  // 不把用户提供的标题写进注释：标题里若含注释结束符，会把后续内容变成可执行代码
-  const head = '/* 课程数据（由投稿自动生成，scripts/add-question.js）\n * 可继续手工编辑；标题见 window.OC.course.title。\n */\n';
-  fs.writeFileSync(file, head + 'window.OC = ' + JSON.stringify(OC, null, 2) + ';\n', 'utf8');
+  cf.writeCourse(courseId, OC);
   console.log('✓ 已新建 data/' + courseId + '.js，含 ' + list.length + ' 题');
   process.exit(0);
 }
