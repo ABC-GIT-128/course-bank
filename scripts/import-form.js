@@ -16,6 +16,7 @@
  *   标签    ppt 或 key，可留空
  */
 const fs = require('fs');
+const cf = require('./course-file.js');
 const path = require('path');
 
 const args = process.argv.slice(2);
@@ -70,7 +71,7 @@ const TYPE_MAP = {
 };
 
 /* ---------- 读现有课程或新建 ---------- */
-const dataFile = path.join(__dirname, '..', 'data', courseId + '.js');
+const dataFile = cf.coursePath(courseId);   /* 白名单 + 越界检查 */
 let OC;
 if (fs.existsSync(dataFile)) {
   const win = {};
@@ -155,8 +156,7 @@ rows.slice(1).forEach((r, n) => {
 });
 
 /* ---------- 写回 ---------- */
-const head = `/* 课程数据：${OC.course.title}\n * 由 scripts/import-form.js 生成，可继续手工编辑。\n * 字段说明见 README.md「数据格式」。\n */\n`;
-fs.writeFileSync(dataFile, head + 'window.OC = ' + JSON.stringify(OC, null, 2) + ';\n', 'utf8');
+cf.writeCourse(OC.course.id, OC);   /* 统一出口：固定注释头 + JSON.stringify */
 
 console.log(`导入完成：新增 ${added.length} 题，跳过 ${skipped.length} 行`);
 if (skipped.length) skipped.slice(0, 10).forEach(s => console.log('  · ' + s));
