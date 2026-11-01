@@ -24,9 +24,13 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
+  /* 浏览器里 factory 拿不到外层 IIFE 的 global 参数，这里自己取一次 */
+  const G = (typeof self !== 'undefined') ? self
+          : (typeof window !== 'undefined') ? window
+          : (typeof globalThis !== 'undefined') ? globalThis : {};
   const QT = (typeof module === 'object' && module.exports)
     ? require('./qtypes.js')
-    : (global.OCQTypes || { typeOf: () => null, meta: t => ({ name: t, chip: t, tag: 't-note', answer: '' }) });
+    : (G.OCQTypes || { typeOf: () => null, meta: t => ({ name: t, chip: t, tag: 't-note', answer: '' }) });
   const QTypes = QT;
 
   const TYPE_MAP = {
@@ -36,7 +40,8 @@
     '计算': 'calc', '计算题': 'calc', '计算题答案': 'calc'
   };
 
-  const TYPE_NAME = { choice: '单项选择', fill: '填空题', term: '名词解释', calc: '计算题' };
+  /* 题型名称统一由注册表提供（新增题型不用改这里） */
+  const TYPE_NAME = new Proxy({}, { get: (o, k) => QTypes.meta(k).name || k });
 
   /* 把全角标点、各种破折号统一掉，方便后续正则 */
   function normalize(text) {

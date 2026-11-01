@@ -10,7 +10,7 @@
   const elHint = $('#fmt');
   const elHelp = $('#bhelp');
 
-  const TYPE_CLASS = { choice: 't-choice', fill: 't-fill', term: 't-term', calc: 't-calc' };
+  const TYPE_CLASS = { choice: 't-choice', fill: 't-fill', term: 't-term', calc: 't-calc', tf: 't-tf' };
   const SUBMIT_URL = 'https://github.com/ABC-GIT-128/course-bank/issues/new?template=batch.yml';
 
   const HINT = `粘贴格式（题型标记 + 答案/解析/出处 各占一行）：
