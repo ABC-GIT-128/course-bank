@@ -14,6 +14,7 @@
  *   - 缺字段、格式不对时退出码为 1，并打印具体原因，供机器人回帖给投稿人
  */
 const fs = require('fs');
+const QTypes = require('../assets/qtypes.js');
 
 /* ---------- 参数 ---------- */
 const args = process.argv.slice(2);
@@ -80,8 +81,9 @@ const typeRaw = get('题型');
 const TYPE_MAP = {
   '单项选择': 'choice', '选择': 'choice', '单选': 'choice',
   '填空': 'fill',
+  '判断': 'tf', '判断题': 'tf', '是非题': 'tf',
   '名词解释': 'term', '名词': 'term',
-  '计算': 'calc', '计算题': 'calc'
+  '计算': 'calc', '计算题': 'calc', '大题': 'calc'
 };
 let type = '';
 Object.keys(TYPE_MAP).forEach(k => { if (!type && typeRaw.replace(/\s/g, '') === k) type = TYPE_MAP[k]; });
@@ -159,6 +161,14 @@ if (type === 'term') {
     fail.push('名词解释需要至少 3 组关键词（在「关键词」里用 | 分隔，或写更多要点），当前 ' + kw.length + ' 组');
   }
   q.q = qText; q.kw = kw;
+}
+
+if (type === 'tf') {
+  const parsed = QTypes.meta('tf').parse ? QTypes.meta('tf').parse(answer) : null;
+  if (parsed === null) fail.push('判断题的「答案」要写「正确」或「错误」（也认 对/错、√/×、T/F）');
+  q.q = qText;
+  q.ans = parsed;
+  q.ansText = String(answer || '').trim();
 }
 
 if (type === 'calc') {

@@ -24,6 +24,11 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
+  const QT = (typeof module === 'object' && module.exports)
+    ? require('./qtypes.js')
+    : (global.OCQTypes || { typeOf: () => null, meta: t => ({ name: t, chip: t, tag: 't-note', answer: '' }) });
+  const QTypes = QT;
+
   const TYPE_MAP = {
     '选择': 'choice', '单选': 'choice', '单项选择': 'choice', '选择题': 'choice',
     '填空': 'fill', '填空题': 'fill', '空': 'fill',
@@ -47,7 +52,8 @@
   function matchTypeHeader(line) {
     let m = /^[\s]*[【\[]\s*([^\】\]]{1,10}?)\s*[】\]]\s*(.*)$/.exec(line);
     if (m) {
-      const key = TYPE_MAP[m[1].trim()];
+      const label = m[1].trim();
+      const key = QTypes.typeOf(label) || TYPE_MAP[label];
       if (key) return { type: key, rest: (m[2] || '').trim() };
     }
     m = /^[\s]*#{1,4}\s*([^\s#]{1,10}题?)\s*$/.exec(line);
@@ -173,6 +179,12 @@
       q.kw = kw;
     }
 
+    if (type === 'tf') {
+      const parsed = QTypes.meta('tf').parse ? QTypes.meta('tf').parse(ansRaw) : null;
+      q.ans = parsed;
+      q.ansText = ansRaw ? String(ansRaw).trim() : '';
+    }
+
     if (type === 'calc') {
       const a = String(ansRaw).trim().split('\n')[0].trim();
       const v = Number(a.replace(/[^\d.eE+-]/g, ''));
@@ -218,6 +230,11 @@
       if (!q.blanks || !q.blanks.length) errs.push(tag + '：缺少答案');
       else if (!pending && q.blankCount !== q.blanks.length) {
         errs.push(tag + '：题干有 ' + q.blankCount + ' 个空，答案给了 ' + q.blanks.length + ' 组');
+      }
+    }
+    if (q.type === 'tf') {
+      if (typeof q.ans !== 'boolean') {
+        errs.push(tag + '：判断题答案要写成「正确 / 错误」（也认 对/错、√/×、T/F）');
       }
     }
     if (q.type === 'term') {

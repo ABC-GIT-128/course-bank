@@ -50,8 +50,9 @@ const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'
  * 这样 <img onerror=…> 会原样显示成文本，而 <b> 加粗、<p> 分段仍然保留。 */
 const ALLOWED_TAG = /&lt;(\/?)(p|br|b|i|sub|sup)(\/?)&gt;/gi;
 const rich = s => esc(s).replace(ALLOWED_TAG, (m, close, tag, slash) => '<' + close + tag.toLowerCase() + slash + '>');
-const TYPE_NAME = {choice:'单项选择', fill:'填空题', term:'名词解释', calc:'计算题', note:'待确认'};
-const TYPE_KEY  = {choice:'t-choice', fill:'t-fill', term:'t-term', calc:'t-calc', note:'t-note'};
+const QT = window.OCQTypes || { meta: t => ({ name: t, chip: t, tag: 't-note' }) };
+const TYPE_NAME = new Proxy({ note:'待确认' }, { get: (o, k) => o[k] || QT.meta(k).name });
+const TYPE_KEY  = new Proxy({ note:'t-note' }, { get: (o, k) => o[k] || QT.meta(k).tag });
 
 const norm = s => String(s == null ? '' : s)
   .replace(/\s+/g,'').replace(/[（）]/g, m => m === '（' ? '(' : ')')
@@ -202,7 +203,7 @@ function syncRetryAll(){
   }
   btn.textContent = '重练全部错题（' + wrongN + '）';
 }
-const CHIP_LABEL = {choice:'选择', fill:'填空', term:'名词解释', calc:'计算', tf:'判断'};
+const CHIP_LABEL = new Proxy({}, { get: (o, k) => QT.meta(k).chip || k });
 
 function yearLabel(y){
   const t = (window.OC && window.OC.course && window.OC.course.termLabels) || {};
@@ -297,6 +298,9 @@ function solHTML(q){
     } else {
       h += '<div class="kw">' + q.kw.map(g => '<span class="kwt">' + esc(g[0]) + '</span>').join('') + '</div>';
     }
+  } else if(q.type === 'tf'){
+    h += '<h5>正确答案</h5><div class="answ">' + (q.ans ? '正确' : '错误') + '</div>';
+    h += '<h5>解析</h5>' + rich(q.exp);
   } else if(q.type === 'calc'){
     h += '<h5>正确答案</h5><div class="answ">' + rich(q.ansText) + '</div>';
     h += '<h5>解析</h5>' + rich(q.exp);
@@ -383,6 +387,20 @@ function cardHTML(q, i){
       }
       const mk = rec ? (k === q.ans ? '<span class="mk">✓</span>' : (rec.user === k ? '<span class="mk">✕</span>' : '')) : '';
       h += '<div class="' + cls + '" data-i="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + rich(o) + '</span>' + mk + '</div>';
+    });
+    h += '</div>';
+  }
+
+  if(q.type === 'tf'){
+    h += '<div class="opts tfopts">';
+    [{v:true, l:'正确', ic:'✓'}, {v:false, l:'错误', ic:'✗'}].forEach(o => {
+      let cls = 'opt tfopt';
+      if(rec){
+        if(o.v === q.ans) cls += ' ok';
+        else if(rec.user === o.v) cls += ' bad';
+      }
+      const mk = rec ? (o.v === q.ans ? '<span class="mk">✓</span>' : (rec.user === o.v ? '<span class="mk">✕</span>' : '')) : '';
+      h += '<button class="' + cls + '" data-tf="' + o.v + '"><span class="k">' + o.ic + '</span><span>' + o.l + '</span>' + mk + '</button>';
     });
     h += '</div>';
   }
@@ -474,6 +492,10 @@ function submit(ev, q, payload){
     detail = judgeFill(q, payload);
     ok = detail.every(Boolean);
     state.rec[q.id] = {ok, user:payload, detail};
+  } else if(q.type === 'tf'){
+    ok = (payload === q.ans);
+    detail = null;
+    state.rec[q.id] = {ok, user:payload};
   } else if(q.type === 'term'){
     if(!payload.trim()){ toast(false,'先写点内容再提交哦'); return; }
     const r = judgeTerm(q, payload);
@@ -541,6 +563,9 @@ $('#list').addEventListener('click', e => {
   }
 
   if(state.rec[q.id]) return;
+
+  const tf = e.target.closest('[data-tf]');
+  if(tf && q.type === 'tf'){ submit(e, q, tf.getAttribute('data-tf') === 'true'); return; }
 
   const opt = e.target.closest('.opt');
   if(opt && q.type === 'choice'){ submit(e, q, +opt.dataset.i); return; }

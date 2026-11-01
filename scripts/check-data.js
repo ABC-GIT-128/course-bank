@@ -11,7 +11,8 @@ const files = fs.readdirSync(dir).filter(f => f.endsWith('.js') && f !== 'course
 
 const errors = [];
 const warns = [];
-const TYPES = ['choice', 'fill', 'term', 'calc', 'note'];
+const QTypes = require(path.join(__dirname, '..', 'assets', 'qtypes.js'));
+const TYPES = QTypes.ORDER.concat(['note']);   /* note = 待确认卡片，不计分 */
 
 // 红线：可能泄露个人信息
 const PII = [
@@ -69,6 +70,9 @@ for (const f of files) {
     if (!TYPES.includes(q.type)) errors.push(`${tag}: type 非法（${q.type}）`);
     if (typeof q.ch !== 'number' && typeof q.ch !== 'string') errors.push(`${tag}: 缺少 ch`);
     if (!q.exp || String(q.exp).length < 8) errors.push(`${tag}: 解析过短或为空`);
+    if (q.type === 'tf' && typeof q.ans !== 'boolean') {
+      errors.push(`${tag}: 判断题 ans 必须是 true/false`);
+    }
     if (!q.ref) warns.push(`${tag}: 缺少出处（ref）`);
 
     if (q.type === 'choice') {

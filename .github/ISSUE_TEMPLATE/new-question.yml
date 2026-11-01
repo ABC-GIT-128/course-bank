@@ -40,7 +40,7 @@ body:
     id: type
     attributes:
       label: 题型
-      options: [单项选择, 填空题, 名词解释, 计算题]
+      options: [单项选择, 填空题, 判断题, 名词解释, 计算题]
     validations:
       required: true
 
@@ -70,6 +70,7 @@ body:
       label: 答案
       description: |
         选择题：写字母，如 A
+        判断题：写「正确」或「错误」（也认 对/错、√/×、T/F）
         填空题：按空顺序写，多个空用 | 或换行分隔；同一空多种说法用 / 分隔
         名词解释：写参考答案
         计算题：以数值开头，如 2.5%
