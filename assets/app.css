@@ -324,3 +324,15 @@ body.home main.wrap{flex:1}
   .opt{min-height:44px}
   #retryAllBtn{margin-top:6px}
 }
+
+/* 每道题的资料出处（题干下方常显） */
+.srcline{display:flex;gap:6px;align-items:flex-start;margin-top:7px;font-size:11.5px;
+  color:#8a93a6;line-height:1.6}
+.srcline .srcfmt{flex:0 0 auto;font-size:10px;line-height:1.6;padding:0 6px;border-radius:5px;
+  font-weight:600;letter-spacing:.02em}
+.sf-ppt{background:#EEEDFE;color:#534AB7}
+.sf-word{background:#E6F1FB;color:#185FA5}
+.sf-pdf{background:#FCEBEB;color:#A32D2D}
+.sf-image{background:#E1F5EE;color:#0F6E56}
+.sf-book{background:#FAEEDA;color:#854F0B}
+.srcline .srctext{min-width:0;word-break:break-word}

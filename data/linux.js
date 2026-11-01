@@ -19,7 +19,25 @@ window.OC = {
     "chapterNames": {
       "1": "交叉编译与系统构建"
     },
-    "keywords": ["Linux","交叉编译","gcc","glibc","引导编译器","内核头文件","arm-linux","Buildroot"]
+    "keywords": [
+      "Linux",
+      "交叉编译",
+      "gcc",
+      "glibc",
+      "引导编译器",
+      "内核头文件",
+      "arm-linux",
+      "Buildroot"
+    ],
+    "sources": [
+      {
+        "id": "word-linux",
+        "kind": "doc",
+        "format": "word",
+        "name": "项目资料：交叉编译器构建",
+        "year": "2026-autumn"
+      }
+    ]
   },
   "questions": [
     {
@@ -43,7 +61,8 @@ window.OC = {
       "exp": "<p>文档中明确写到设置交叉编译器的目标架构为 arm-linux，后续的所有前缀（如 arm-linux-gcc）也是基于这个变量生成的。</p>",
       "ref": "项目十三 交叉编译器构建 四、项目步骤",
       "id": "b5-01",
-      "warn": []
+      "warn": [],
+      "doc": "word-linux"
     },
     {
       "type": "choice",
@@ -66,7 +85,8 @@ window.OC = {
       "exp": "<p>文档的错误解决方法明确指出，报错是因为在设置好内核配置后，没有使用命令生成 include/linux/version.h 文件，导致 glibc 认为内核头文件不完整。</p>",
       "ref": "项目十三 交叉编译器构建 四、项目步骤",
       "id": "b5-02",
-      "warn": []
+      "warn": [],
+      "doc": "word-linux"
     },
     {
       "type": "choice",
@@ -89,7 +109,8 @@ window.OC = {
       "exp": "<p>文档提示，缺少 glibc 头文件时遇到 pthread.h 报错，是因为交叉编译器尝试开启线程支持，加上 --disable-threads 即可在无 glibc 时暂时关闭该功能。</p>",
       "ref": "项目十三 交叉编译器构建 四、项目步骤",
       "id": "b5-03",
-      "warn": []
+      "warn": [],
+      "doc": "word-linux"
     },
     {
       "type": "choice",
@@ -112,7 +133,8 @@ window.OC = {
       "exp": "<p>文档给出的解决方法是通过 ln -s 命令，将已存在的 libgcc.a 软链接为 libgcc_eh.a，以满足链接器的查找需求。</p>",
       "ref": "项目十三 交叉编译器构建 四、项目步骤",
       "id": "b5-04",
-      "warn": []
+      "warn": [],
+      "doc": "word-linux"
     },
     {
       "type": "choice",
@@ -135,7 +157,8 @@ window.OC = {
       "exp": "<p>文档指出，需要使用 vi 编辑 libc.so，将列举的链接库绝对路径（如 /lib/libc.so.6）中的 /lib/ 字样全部去掉，变为相对路径。</p>",
       "ref": "项目十三 交叉编译器构建 四、项目步骤",
       "id": "b5-05",
-      "warn": []
+      "warn": [],
+      "doc": "word-linux"
     },
     {
       "type": "fill",
@@ -157,7 +180,8 @@ window.OC = {
       "exp": "<p>文档中的脚本代码使用了 export 命令来导出多个变量，如 export PRJROOT TARGET PREFIX 等。</p>",
       "ref": "项目十三 交叉编译器构建 四、项目步骤",
       "id": "b5-06",
-      "warn": []
+      "warn": [],
+      "doc": "word-linux"
     },
     {
       "type": "fill",
@@ -179,7 +203,8 @@ window.OC = {
       "exp": "<p>环境变量脚本中定义了 SRC_DIR=$PRJROOT/src-dir，后续解压 linux、binutils 等都是解压到该目录或从此目录提取。</p>",
       "ref": "项目十三 交叉编译器构建 四、项目步骤",
       "id": "b5-07",
-      "warn": []
+      "warn": [],
+      "doc": "word-linux"
     },
     {
       "type": "fill",
@@ -201,7 +226,8 @@ window.OC = {
       "exp": "<p>configure 命令中，--target 指定目标平台，--prefix 用于指定安装目录。</p>",
       "ref": "项目十三 交叉编译器构建 四、项目步骤",
       "id": "b5-08",
-      "warn": []
+      "warn": [],
+      "doc": "word-linux"
     },
     {
       "type": "fill",
@@ -223,7 +249,8 @@ window.OC = {
       "exp": "<p>文档中针对此错误给出的解决方法是手动传入变量 libc_cv_forced_unwind=yes 来欺骗 configure 脚本，使其认为支持此特性。</p>",
       "ref": "项目十三 交叉编译器构建 四、项目步骤",
       "id": "b5-09",
-      "warn": []
+      "warn": [],
+      "doc": "word-linux"
     },
     {
       "type": "fill",
@@ -245,7 +272,8 @@ window.OC = {
       "exp": "<p>文档提示从 fenv.h 中找到定义并添加到报错文件中，即 #define FE_TOWARDZERO 0xc00000（同时还要添加 FE_INEXACT 16）。</p>",
       "ref": "项目十三 交叉编译器构建 四、项目步骤",
       "id": "b5-10",
-      "warn": []
+      "warn": [],
+      "doc": "word-linux"
     },
     {
       "type": "term",
@@ -275,7 +303,8 @@ window.OC = {
       "exp": "<p>在文档中，使用 PC 机（如 x86 架构）的 gcc 去编译出能在 ARM 架构上运行的程序，这就是交叉编译的核心概念。</p>",
       "ref": "项目十三 交叉编译器构建 一、项目目的",
       "id": "b5-11",
-      "warn": []
+      "warn": [],
+      "doc": "word-linux"
     },
     {
       "type": "term",
@@ -305,7 +334,8 @@ window.OC = {
       "exp": "<p>文档明确提到生成的 arm-linux-ar、arm-linux-as、arm-linux-ld 等是编译其他交叉程序的基础，因此必须放到第一步进行安装。</p>",
       "ref": "项目十三 交叉编译器构建 四、项目步骤",
       "id": "b5-12",
-      "warn": []
+      "warn": [],
+      "doc": "word-linux"
     },
     {
       "type": "term",
@@ -335,7 +365,8 @@ window.OC = {
       "exp": "<p>文档中提到，因为当时没有 glibc 的支持，只能先利用主机 gcc 编译出一个只能编译 C 语言、不支持线程的简易版 gcc，专门用来生成后面的 glibc。</p>",
       "ref": "项目十三 交叉编译器构建 四、项目步骤",
       "id": "b5-13",
-      "warn": []
+      "warn": [],
+      "doc": "word-linux"
     }
   ]
 };

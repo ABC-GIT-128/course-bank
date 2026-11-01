@@ -222,8 +222,28 @@ function solHTML(q){
     h += '<h5>解析</h5>' + rich(q.exp);
     if(q.sol) h += '<h5>解题步骤</h5>' + q.sol.map(s => '<div class="step">' + rich(s) + '</div>').join('');
   }
-  if(q.ref) h += '<div class="ref">知识依据：<b>' + rich(q.ref) + '</b></div>';
   return h;
+}
+
+/* ---------- 资料出处（course.sources + q.doc） ---------- */
+const FMT_LABEL = { ppt:'PPT', word:'Word', pdf:'PDF', image:'图片', book:'课本' };
+let SRC_MAP = null;
+function srcOf(q){
+  if(!SRC_MAP){
+    SRC_MAP = {};
+    ((window.OC && window.OC.course && window.OC.course.sources) || []).forEach(x => { SRC_MAP[x.id] = x; });
+  }
+  return q.doc ? SRC_MAP[q.doc] : null;
+}
+function srcLine(q){
+  const src = srcOf(q);
+  const ref = q.ref ? String(q.ref) : '';
+  if(!src && !ref) return '';
+  const fmt = src ? src.format : 'doc';
+  const tag = FMT_LABEL[fmt] || '资料';
+  const tail = [src ? '《' + src.name + '》' : '', ref].filter(Boolean).join(' ');
+  return '<div class="srcline"><span class="srcfmt sf-' + fmt + '">' + tag + '</span>' +
+         '<span class="srctext">出处：' + rich(tail) + '</span></div>';
 }
 
 function cardHTML(q, i){
@@ -236,6 +256,7 @@ function cardHTML(q, i){
        (q.src === 'ppt' ? '<span class="tag t-ppt">PPT 专节</span>' : '') +
        (q.src === 'key' ? '<span class="tag t-note">重点</span>' : '') + '</div>';
   h += '<div class="qtext">' + rich(q.q).replace(/＿{3}/g, '<span class="bk"></span>') + '</div>';
+  h += srcLine(q);
 
   if(q.type === 'note'){
     h += '<div class="notebox"><b>为什么归不进填空/名词解释：</b>' + esc(q.why || '') + '</div>';
