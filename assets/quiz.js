@@ -235,14 +235,39 @@ function srcOf(q){
   }
   return q.doc ? SRC_MAP[q.doc] : null;
 }
+/* 位置描述清洗：PPT 标签已表明形式，图片类去掉"重点标注 ·"前缀和文件名 */
+function cleanRef(q){
+  let r = String(q.ref == null ? '' : q.ref).trim();
+  if(!r) return '';
+  return r
+    .replace(/\bPPT\b/gi, ' ')
+    .replace(/^重点标注\s*[·・]\s*/, '')
+    .replace(/\s*[0-9a-f]{16,}\.(?:jpe?g|png|webp|gif)\b/gi, '')
+    .replace(/\s*[·・]\s*$/, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+/* 课本类按章节定位（题目自带 ch，配 chapterNames 里的章名） */
+function chapterLabel(q){
+  const cn = (window.OC && window.OC.course && window.OC.course.chapterNames) || {};
+  if(q.ch == null || q.ch === '') return '';
+  const name = cn[q.ch] || '';
+  return '第' + q.ch + '章' + (name ? ' ' + name : '');
+}
+
 function srcLine(q){
   const src = srcOf(q);
-  const ref = q.ref ? String(q.ref) : '';
+  const isBook = !!(src && src.kind === 'book');
+  /* 文档 → 原名 + 具体位置；课本 → 原名 + 章节 */
+  const ref = isBook ? chapterLabel(q) : cleanRef(q);
   if(!src && !ref) return '';
   const fmt = src ? src.format : 'doc';
-  const tag = FMT_LABEL[fmt] || '资料';
+  /* 课本类统一标「课本」，其它按文件形式标 */
+  const tag = src && src.kind === 'book' ? '课本' : (FMT_LABEL[fmt] || '资料');
+  const cls = src && src.kind === 'book' ? 'book' : fmt;
   const tail = [src ? '《' + src.name + '》' : '', ref].filter(Boolean).join(' ');
-  return '<div class="srcline"><span class="srcfmt sf-' + fmt + '">' + tag + '</span>' +
+  return '<div class="srcline"><span class="srcfmt sf-' + cls + '">' + tag + '</span>' +
          '<span class="srctext">出处：' + rich(tail) + '</span></div>';
 }
 
