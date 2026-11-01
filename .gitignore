@@ -35,3 +35,8 @@ _inbox/
 # 构建产物：课程索引由 scripts/build-index.js 生成，不入库
 # 部署时 Actions 会现生成；本地跑一次 npm run build 即可得到
 data/courses.js
+
+# 本地临时探针文件
+_*.html
+_*.py
+_*.md
