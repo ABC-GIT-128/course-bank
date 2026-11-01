@@ -336,3 +336,20 @@ body.home main.wrap{flex:1}
 .sf-image{background:#E1F5EE;color:#0F6E56}
 .sf-book{background:#FAEEDA;color:#854F0B}
 .srcline .srctext{min-width:0;word-break:break-word}
+
+/* 解析里的溯源小字（课本类原图序号） */
+.refmini{margin-top:10px;font-size:11px;color:#9aa3b2;letter-spacing:.01em}
+
+/* 资料筛选条 */
+.srcbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 8px}
+.srcbar .kindbar{display:flex;gap:6px}
+.kchip{border:1px solid var(--line);background:#fff;color:#5b6472;border-radius:99px;
+  padding:4px 12px;font-size:12px;cursor:pointer;font-family:inherit;line-height:1.7}
+.kchip:hover{background:#f4f5f9}
+.kchip.on{background:#eef2ff;border-color:#c7cdfa;color:#3730a3;font-weight:600}
+.srcsel{border:1px solid var(--line);background:#fff;color:#3f4756;border-radius:9px;
+  padding:5px 8px;font-size:12px;font-family:inherit;max-width:56vw}
+@media(max-width:600px){
+  .srcbar{gap:6px}
+  .srcsel{font-size:11.5px;padding:5px 6px}
+}

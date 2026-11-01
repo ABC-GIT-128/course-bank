@@ -39,7 +39,7 @@ const BANK = window.OC.questions.filter(function (q) {
 
 /* ============================ 状态 ============================ */
 const LS = 'oc_' + COURSE.id;   // 每门课独立存储，互不干扰
-const state = { mode:'all', shuffled:false, seed:1, list:[], rec:{}, wrongSet:{}, open:{} };
+const state = { mode:'all', kind:'all', doc:'all', year:'all', shuffled:false, seed:1, list:[], rec:{}, wrongSet:{}, open:{} };
 const byId = {};
 BANK.forEach(q => byId[q.id] = q);
 
@@ -61,7 +61,8 @@ const norm = s => String(s == null ? '' : s)
 
 function save(){
   try{ localStorage.setItem(LS, JSON.stringify({
-    rec:state.rec, mode:state.mode, shuffled:state.shuffled, seed:state.seed, y:Math.round(window.scrollY)
+    rec:state.rec, mode:state.mode, shuffled:state.shuffled, seed:state.seed,
+    kind:state.kind, doc:state.doc, year:state.year, y:Math.round(window.scrollY)
   })); }catch(e){}
 }
 function load(){
@@ -69,6 +70,9 @@ function load(){
   try{ d = JSON.parse(localStorage.getItem(LS) || '{}'); }catch(e){}
   if(d.rec) state.rec = d.rec;
   if(d.mode && d.mode !== 'wrong') state.mode = d.mode;
+  if(d.kind) state.kind = d.kind;
+  if(d.doc) state.doc = d.doc;
+  if(d.year) state.year = d.year;
   if(typeof d.shuffled === 'boolean') state.shuffled = d.shuffled;
   if(typeof d.seed === 'number' && d.seed > 1) state.seed = d.seed;
   Object.keys(state.rec).forEach(k => { if(!state.rec[k].ok) state.wrongSet[k] = 1; });
@@ -110,8 +114,25 @@ function toast(ok, msg){
 
 /* ============================ 列表构建 ============================ */
 function hashStr(s){ let h = 2166136261; for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h,16777619); } return h >>> 0; }
+/* 资料层：年份 → 大类 → 具体资料（对题库做的一层筛选） */
+function scopedList(){
+  return BANK.filter(q => {
+    const s = q.doc ? srcOf(q) : null;
+    if(state.kind !== 'all'){
+      if(!s) return false;
+      if((s.kind || 'doc') !== state.kind) return false;
+    }
+    if(state.doc !== 'all' && q.doc !== state.doc) return false;
+    if(state.year !== 'all'){
+      const y = (s && s.year) || ((window.OC && window.OC.course && window.OC.course.terms) || [])[0];
+      if(y !== state.year) return false;
+    }
+    return true;
+  });
+}
+
 function buildList(){
-  let arr = BANK.slice();
+  let arr = scopedList();
   if(state.mode === 'wrong') arr = arr.filter(q => state.wrongSet[q.id]);
   else if(state.mode === 'ppt') arr = arr.filter(q => q.src === 'ppt');
   else if(state.mode === 'key') arr = arr.filter(q => q.src === 'key');
@@ -181,14 +202,73 @@ function syncRetryAll(){
   }
   btn.textContent = '重练全部错题（' + wrongN + '）';
 }
+const CHIP_LABEL = {choice:'选择', fill:'填空', term:'名词解释', calc:'计算', tf:'判断'};
+
+function yearLabel(y){
+  const t = (window.OC && window.OC.course && window.OC.course.termLabels) || {};
+  return t[y] || y;
+}
+
+/* 资料层筛选：年份（多学期才出现） + 大类 + 具体资料 */
+function renderSrcBar(){
+  const box = document.getElementById('srcbar');
+  if(!box) return;
+  const course = (window.OC && window.OC.course) || {};
+  const sources = course.sources || [];
+  if(!sources.length){ box.innerHTML = ''; box.style.display = 'none'; return; }
+  box.style.display = '';
+
+  const years = [...new Set(sources.map(s => s.year || ((course.terms || [])[0])).filter(Boolean))];
+  const kinds = [...new Set(sources.map(s => s.kind || 'doc'))];
+  const docs = sources.filter(s => state.kind === 'all' || (s.kind || 'doc') === state.kind);
+
+  let h = '';
+  if(years.length > 1){
+    h += '<select class="srcsel" data-sel="year"><option value="all">全部年份</option>' +
+      years.map(y => '<option value="' + esc(y) + '"' + (state.year === y ? ' selected' : '') + '>' +
+        esc(yearLabel(y)) + '</option>').join('') + '</select>';
+  }
+  h += '<div class="kindbar">' + [['all','全部'],['doc','文档'],['book','课本']]
+    .filter(([k]) => k === 'all' || kinds.includes(k))
+    .map(([k,l]) => '<button class="kchip' + (state.kind === k ? ' on' : '') + '" data-k="' + k + '">' + l + '</button>')
+    .join('') + '</div>';
+
+  const total = BANK.filter(q => docs.some(x => x.id === q.doc)).length;
+  h += '<select class="srcsel" data-sel="doc"><option value="all">全部资料（' + total + ' 题）</option>' +
+    docs.map(x => {
+      const n = BANK.filter(q => q.doc === x.id).length;
+      return '<option value="' + esc(x.id) + '"' + (state.doc === x.id ? ' selected' : '') + '>' +
+        esc(x.name) + ' · ' + n + ' 题</option>';
+    }).join('') + '</select>';
+
+  box.innerHTML = h;
+}
+
+function syncScopeChange(){
+  if(state.doc !== 'all'){
+    const s = srcOf({ doc: state.doc });
+    if(!s || (state.kind !== 'all' && (s.kind || 'doc') !== state.kind)) state.doc = 'all';
+  }
+  if(['choice','fill','term','calc','tf'].indexOf(state.mode) >= 0){
+    if(!scopedList().some(q => q.type === state.mode)) state.mode = 'all';
+  }
+  save(); renderSrcBar(); renderChips(); buildList(); renderAll();
+  window.scrollTo({ top: 0 });
+}
+
 function renderChips(){
-  const c = {all:BANK.length, choice:0, fill:0, term:0, calc:0};
-  BANK.forEach(q => c[q.type]++);
-  const pptN = BANK.filter(q => q.src === 'ppt').length;
-  const keyN = BANK.filter(q => q.src === 'key').length;
-  const items = [['all','全部',c.all],['key','重点',keyN],['choice','选择',c.choice],['fill','填空',c.fill],
-    ['term','名词解释',c.term],['calc','计算',c.calc],
-    ['ppt','PPT 专节',pptN],['wrong','错题本',Object.keys(state.wrongSet).length]];
+  const sc = scopedList();
+  const c = {all: sc.length};
+  sc.forEach(q => { c[q.type] = (c[q.type] || 0) + 1; });
+  const pptN = sc.filter(q => q.src === 'ppt').length;
+  const keyN = sc.filter(q => q.src === 'key').length;
+
+  /* 只列出"当前范围内有题"的题型，避免一排 0 */
+  const items = [['all','全部',c.all]];
+  if(keyN) items.push(['key','重点',keyN]);
+  ['choice','fill','term','calc','tf'].forEach(t => { if(c[t]) items.push([t, CHIP_LABEL[t], c[t]]); });
+  if(pptN) items.push(['ppt','PPT 专节',pptN]);
+  items.push(['wrong','错题本',Object.keys(state.wrongSet).length]);
   $('#chips').innerHTML = items.map(([k,l,n]) =>
     '<div class="chip' + (state.mode===k?' on':'') + '" data-m="' + k + '">' + l + '<span class="n">' + n + '</span></div>').join('');
   $('#chips').querySelectorAll('.chip').forEach(el => {
@@ -342,6 +422,13 @@ function cardHTML(q, i){
       ? '<div class="vd ok"><span class="ic">✓</span>回答正确</div>'
       : '<div class="vd bad"><span class="ic">✕</span>' + (rec.skip ? '已看答案（记为未掌握）' : '回答错误') +
         '<span class="r">看下方解析订正</span></div>';
+  }
+
+  /* 课本类：把图片序号留在解析里，便于回去核对原图（不占出处行） */
+  const bs = srcOf(q);
+  if(bs && bs.kind === 'book'){
+    const pic = cleanRef(q);
+    if(pic) h += '<div class="refmini">原图：' + esc(pic) + '</div>';
   }
 
   h += '<div class="solbar">' +
@@ -518,7 +605,26 @@ $('#fab').onclick = () => {
 /* ============================ 启动 ============================ */
 load();
 $('#btnShuffle').classList.toggle('on', state.shuffled);
+renderSrcBar();
 if(!window.__OC_BLOCKED){ renderChips(); buildList(); renderAll(); }
+
+(function bindSrcBar(){
+  const box = document.getElementById('srcbar');
+  if(!box) return;
+  box.addEventListener('click', e => {
+    const b = e.target.closest('.kchip');
+    if(!b) return;
+    state.kind = b.getAttribute('data-k');
+    syncScopeChange();
+  });
+  box.addEventListener('change', e => {
+    const sel = e.target.closest('select[data-sel]');
+    if(!sel) return;
+    if(sel.getAttribute('data-sel') === 'year') state.year = sel.value;
+    else state.doc = sel.value;
+    syncScopeChange();
+  });
+})();
 if(state._y) requestAnimationFrame(() => window.scrollTo({top:state._y}));
 let st = null;
 window.addEventListener('scroll', () => {
