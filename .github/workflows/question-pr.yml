@@ -225,7 +225,11 @@ jobs:
             }
             let summary = '';
             try {
-              summary = fs.readFileSync('.tmp/parse.log', 'utf8').trim().split('\n').slice(0, 16).join('\n');
+              const lines = fs.readFileSync('.tmp/parse.log', 'utf8').trim().split('\n');
+              summary = lines.slice(0, 16).join('\n');
+              /* 「暂不支持题型」的警告必须在摘要里，不能被 16 行截掉 */
+              const warn = lines.filter(l => l.indexOf('⚠') >= 0 && summary.indexOf(l) < 0);
+              if (warn.length) summary += '\n' + warn.join('\n');
             } catch (e) {}
             const tail = summary ? '\n\n解析结果：\n```\n' + summary + '\n```\n' : '\n';
             await github.rest.issues.createComment({

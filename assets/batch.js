@@ -10,7 +10,7 @@
   const elHint = $('#fmt');
   const elHelp = $('#bhelp');
 
-  const TYPE_CLASS = { choice: 't-choice', fill: 't-fill', term: 't-term', calc: 't-calc', tf: 't-tf' };
+  const TYPE_CLASS = { choice: 't-choice', fill: 't-fill', term: 't-term', calc: 't-calc', tf: 't-tf', note: 't-note' };
   const SUBMIT_URL = 'https://github.com/ABC-GIT-128/course-bank/issues/new?template=batch.yml';
 
   const HINT = `粘贴格式（题型标记 + 答案/解析/出处 各占一行）：
@@ -94,6 +94,7 @@ D. 电感式
   }
 
   function answerLine(q) {
+    if (q.type === 'note') return '待确认：' + (q.why || '该题型暂不支持，只展示不判分');
     if (q.type === 'choice') {
       const opt = (q.opts || [])[q.ans] || '';
       return '答案：' + 'ABCD'[q.ans] + '．' + opt;
@@ -195,8 +196,10 @@ D. 电感式
         return;
       }
       /* 与入库口径一致：允许「部分成功」，但要先说清会跳过几题 */
+      const noteN = r.questions.filter(q => q.type === 'note').length;
       const ok = window.confirm(
         '有 ' + r.errors.length + ' 题格式不对（会被跳过），' + r.questions.length + ' 题可入库。\n\n' +
+        (noteN ? '其中 ' + noteN + ' 题用了本库暂不支持的题型，会按「待确认」收录（能看、不能作答）。\n\n' : '') +
         '继续提交的话，只有这 ' + r.questions.length + ' 题会进题库；跳过的题请改好后另发一条。\n\n确定提交吗？'
       );
       if (!ok) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
@@ -209,8 +212,10 @@ D. 电感式
     } catch (err) {
       copied = false;
     }
+    const noteOnly = r.questions.filter(q => q.type === 'note').length;
     window.open(SUBMIT_URL, '_blank', 'noopener');
-    toast(copied ? '已复制，打开的表单里直接粘贴即可' : '表单已打开，请手动复制上面的内容');
+    toast((copied ? '已复制，打开的表单里直接粘贴即可' : '表单已打开，请手动复制上面的内容') +
+      (noteOnly ? '（其中 ' + noteOnly + ' 题会按待确认收录）' : ''));
   });
 
   elHint.textContent = HINT;
@@ -218,6 +223,16 @@ D. 电感式
   /* ---------- AI 指令：从 templates/ai-prompt.txt 载入，保证和仓库里那份一致 ---------- */
   const elPrompt = $('#aiPrompt');
   let promptText = '';
+
+  /* 提示词里的 {{TYPE_LIST}}：源文件保留占位符，构建时注入；
+   * 本地直接打开时用注册表在运行时补上，两种方式都得到同一份清单 */
+  function fillTypes(text) {
+    const list = (window.OCQTypes && window.OCQTypes.typeListText)
+      ? window.OCQTypes.typeListText()
+      : '';
+    if (!list) return text;
+    return String(text).replace(/\{\{\s*TYPE_LIST\s*\}\}/g, list);
+  }
 
   function fallbackPrompt() {
     return '【任务】把下面的课程资料整理成题库格式，供刷题网站导入。\n\n' +
@@ -259,11 +274,11 @@ D. 电感式
     fetch(PROMPTS[mode].url)
       .then(r => (r.ok ? r.text() : Promise.reject(new Error('404'))))
       .then(t => {
-        promptCache[mode] = t.trim();
+        promptCache[mode] = fillTypes(t.trim());
         if (promptMode === mode) { promptText = promptCache[mode]; elPrompt.textContent = promptText; }
       })
       .catch(() => {
-        promptCache[mode] = fallbackPrompt();
+        promptCache[mode] = fillTypes(fallbackPrompt());
         if (promptMode === mode) { promptText = promptCache[mode]; elPrompt.textContent = promptText; }
       });
   }

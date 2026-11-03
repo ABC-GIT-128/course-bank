@@ -28,6 +28,10 @@ jobs:
       - name: 安全回归测试
         run: node scripts/test-security.js
 
+      # 提示词里的题型清单必须来自注册表（不能手写）
+      - name: 检查题型清单占位符
+        run: node scripts/inject-types.js --check
+
       # 部署前重建索引并校验：宁可这次不发布，也不要把坏数据推上线
       # 注意：data/courses.js 是产物、不入库，就是在这里现生成的
       - name: 校验数据
@@ -53,6 +57,10 @@ jobs:
       # 真正删除下架内容：下架课程的 data 文件不进产物，短地址页换成静态提示页
       - name: 裁剪下架内容
         run: node scripts/prune-build.js .build
+
+      # 题型清单由 assets/qtypes.js 生成后注入提示词，避免提示词与注册表各写一份
+      - name: 注入题型清单
+        run: node scripts/inject-types.js .build
 
       # 给静态资源加版本号：穿透浏览器与 Service Worker 缓存
       - name: 加缓存版本号

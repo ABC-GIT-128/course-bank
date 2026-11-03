@@ -16,6 +16,7 @@
 const fs = require('fs');
 const path = require('path');
 const { parseBatch } = require(path.join(__dirname, '..', 'assets', 'parse-lib.js'));
+const QTypes = require(path.join(__dirname, '..', 'assets', 'qtypes.js'));
 
 const args = process.argv.slice(2);
 const flag = n => {
@@ -154,11 +155,22 @@ const r = parseBatch(text, { defaultCh, idPrefix });
 console.log('识别 ' + r.stats.total + ' 题：可用 ' + r.stats.ok + ' 题' +
   (r.stats.skipped ? '，跳过 ' + r.stats.skipped + ' 题' : ''));
 if (r.questions.length) {
-  const names = { choice: '选择', fill: '填空', term: '名词', calc: '计算' };
+  const names = new Proxy({}, { get: (o, k) => QTypes.meta(k).chip || k });
   const by = Object.entries(r.stats.byType).map(([k, v]) => names[k] + ' ' + v).join(' / ');
   console.log('题型分布：' + by);
   console.log('章节分布：第' + [...new Set(r.questions.map(q => q.ch))].sort((a, b) => a - b).join('、') + '章');
 }
+if (r.unregistered && r.unregistered.length) {
+  console.log('');
+  console.log('⚠ 有 ' + r.unregistered.length + ' 题用了本库暂不支持的题型，已按「待确认」收录（能看、不能作答）：');
+  const grouped = {};
+  r.unregistered.forEach(u => { (grouped[u.label] = grouped[u.label] || []).push(u.index); });
+  Object.keys(grouped).forEach(label => {
+    console.log('  · 【' + label + '】第 ' + grouped[label].join('、') + ' 题');
+  });
+  console.log('  这些题不会计入进度与正确率。要正式支持，需在 assets/qtypes.js 里声明该题型。');
+}
+
 if (r.errors.length) {
   console.log('');
   console.log('跳过的题目（改好后可以重新提交）：');
@@ -173,7 +185,7 @@ if (!r.questions.length) {
   process.exit(1);
 }
 
-const payload = { course, questions: r.questions, errors: r.errors };
+const payload = { course, questions: r.questions, errors: r.errors, unregistered: r.unregistered || [] };
 const out = flag('out');
 
 if (args.indexOf('--check') >= 0) {

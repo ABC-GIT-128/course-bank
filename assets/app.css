@@ -361,3 +361,6 @@ body.home main.wrap{flex:1}
   display:inline-flex;align-items:center;justify-content:center;font-size:13px}
 @media(max-width:420px){ .tfopts{grid-template-columns:1fr} }
 .t-tf{background:#FEF3C7;color:#92400E}
+
+/* 待确认题：题干里保留的换行要能显示（选项各占一行） */
+.qtext{white-space:pre-line}

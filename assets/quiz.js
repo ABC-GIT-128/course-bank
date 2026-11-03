@@ -368,7 +368,7 @@ function cardHTML(q, i){
   h += srcLine(q);
 
   if(q.type === 'note'){
-    h += '<div class="notebox"><b>为什么归不进填空/名词解释：</b>' + esc(q.why || '') + '</div>';
+    h += '<div class="notebox"><b>待确认：</b>' + esc(q.why || '这条内容暂不参与判分。') + '</div>';
     h += '<div class="solbar"><button class="tg" data-act="toggle">提示与解析 <i>▼</i></button></div>';
 
 

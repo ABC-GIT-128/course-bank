@@ -10,7 +10,13 @@
  *   tag       卡片标签的 CSS 类名
  *   answer    答案写法说明（给表单和提示词用）
  *   parse     把「答案：xxx」的原文规范化成结构化答案，返回 null 表示无法识别
- *   check     校验一条题目，返回错误描述数组
+ *   judge     判分方式：single=单值相等 / bool=布尔 / set=集合相等 / seq=顺序 / self=自评
+ *   render    渲染方式：与 judge 配套的前端交互
+ *   auto      能否自动判分（false 表示只展示、不计分，例如 note）
+ *
+ * 新增一种题型的最小成本：
+ *   - 判分与渲染都能复用上面的取值 → 只加一条声明（改这个文件即可）
+ *   - 需要新的判分或交互 → 声明 + 在 quiz.js 里加一个分支（注册表负责认出它并给出提示）
  */
 (function (global, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -27,7 +33,10 @@
       chip: '选择',
       group: '客观题',
       tag: 't-choice',
-      answer: '一个选项字母（A/B/C/D）'
+      answer: '一个选项字母（A/B/C/D）',
+      judge: 'single',
+      render: 'choice',
+      auto: true
     },
     tf: {
       name: '判断题',
@@ -35,6 +44,9 @@
       group: '客观题',
       tag: 't-tf',
       answer: '「正确」或「错误」（也认 对/错、√/×、T/F）',
+      judge: 'bool',
+      render: 'tf',
+      auto: true,
       /* 判断题答案：把各种写法收敛成 true / false */
       parse: function (raw) {
         const s = String(raw == null ? '' : raw).trim().replace(/\s+/g, '');
@@ -49,21 +61,41 @@
       chip: '填空',
       group: '客观题',
       tag: 't-fill',
-      answer: '每个空一组答案，多组用 | 分隔，同一空多种说法用 / 分隔'
+      answer: '每个空一组，多组用 | 分隔，同一空多种说法用 / 分隔',
+      judge: 'set',
+      render: 'fill',
+      auto: true
     },
     term: {
       name: '名词解释',
       chip: '名词解释',
       group: '主观题',
       tag: 't-term',
-      answer: '参考答案 + 至少 3 组关键词（用 | 分隔）'
+      answer: '参考答案 + 至少 3 组关键词（用 | 分隔）',
+      judge: 'self',
+      render: 'term',
+      auto: true
     },
     calc: {
       name: '计算题',
       chip: '大题',
       group: '大题',
       tag: 't-calc',
-      answer: '以数值开头并带单位；解析按步骤用 | 分隔'
+      answer: '以数值开头并带单位；解析按步骤用 | 分隔',
+      judge: 'single',
+      render: 'calc',
+      auto: true
+    },
+    /* 待确认：不是可投稿题型，只用于「题型暂不支持」的降级收录，不计分不计进度 */
+    note: {
+      name: '待确认',
+      chip: '待确认',
+      group: '其它',
+      tag: 't-note',
+      answer: '',
+      judge: 'none',
+      render: 'note',
+      auto: false
     }
   };
 
@@ -90,5 +122,22 @@
     return TYPES[type] || { name: type || '未知题型', chip: type || '?', group: '其它', tag: 't-note', answer: '' };
   }
 
-  return { TYPES, ORDER, ALIAS, typeOf, meta };
+  /* 生成「题型清单」文本，供两份 AI 提示词与投稿模板使用。
+   * 提示词不再手写清单，避免注册表加了新题型、提示词还停在旧版本。 */
+  function typeListText() {
+    const lines = ORDER.map(k => {
+      const t = TYPES[k];
+      return '- 【' + t.chip + '】' + t.name + ' —— 答案：' + t.answer;
+    });
+    return [
+      '【可用题型清单】',
+      lines.join('\n'),
+      '',
+      '只允许使用上面这 ' + ORDER.length + ' 种题型标记，不要自创标记（不要写【多选】【排序】【连线】【简答】等）。',
+      '原文题型不在这份清单里时：不要改写成本库支持的题型，整题跳过，并在末尾【未生成】里写明',
+      '「第 N 题（原文是XX题，本库暂不支持）」。'
+    ].join('\n');
+  }
+
+  return { TYPES, ORDER, ALIAS, typeOf, meta, typeListText };
 });

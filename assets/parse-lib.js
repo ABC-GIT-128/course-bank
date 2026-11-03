@@ -53,6 +53,9 @@
       .replace(/[ \t]+$/gm, '');
   }
 
+  /* 这些【xxx】不是题型：要么是 AI 输出的统计段落，要么是字段名，直接忽略 */
+  const NON_TYPE_LABELS = /^(未生成|核对|说明|备注|注意|提示|总计|合计|统计|清单|答案|参考答案|正确答案|解析|分析|出处|来源|关键词|要点|题干|选项|题目|题型|格式|规则|任务|要求)$/;
+
   /* 题型标记行：支持「【选择】」独占一行，也支持「【选择】1. 题干…」写在同一行 */
   function matchTypeHeader(line) {
     let m = /^[\s]*[【\[]\s*([^\】\]]{1,10}?)\s*[】\]]\s*(.*)$/.exec(line);
@@ -60,6 +63,10 @@
       const label = m[1].trim();
       const key = QTypes.typeOf(label) || TYPE_MAP[label];
       if (key) return { type: key, rest: (m[2] || '').trim() };
+      if (NON_TYPE_LABELS.test(label)) return { type: '__ignore__', rest: '' };
+      /* 有【】标记但注册表里没有这种题型：不猜测、不改写，
+       * 按「待确认」收录（只展示不判分），并记入 unregistered 上报给维护者 */
+      return { type: 'note', unknown: label, rest: (m[2] || '').trim() };
     }
     m = /^[\s]*#{1,4}\s*([^\s#]{1,10}题?)\s*$/.exec(line);
     if (!m) m = /^[\s]*[一二三四五六七八九十]+[、.]\s*([^\s]{1,10})\s*$/.exec(line);
@@ -144,9 +151,17 @@
 
     /* 题干：去掉题号 */
     let stemText = stem.join('\n').trim();
+    /* 单行题干直接剥题号；多行（例如待确认题把选项也留在题干里）按首行剥 */
     const sn = stripNumber(stemText);
-    if (sn) stemText = sn.text;
-    stemText = stemText.replace(/\s*\n\s*/g, ' ').trim();
+    if (sn) {
+      stemText = sn.text;
+    } else {
+      const ls = stemText.split('\n');
+      const sn0 = stripNumber(ls[0]);
+      if (sn0) { ls[0] = sn0.text; stemText = ls.join('\n').trim(); }
+    }
+    /* 待确认题保留换行（选项各占一行更好读），其它题型压成一行 */
+    stemText = stemText.replace(/\s*\n\s*/g, type === 'note' ? '\n' : ' ').trim();
     q.q = stemText;
 
     /* ---------- 按题型组装 ---------- */
@@ -201,6 +216,12 @@
       const tol = (/0?\.\d+/.exec(uLine) || [])[0];
       q.tol = tol ? Number(tol) : 0.03;
       q.sol = String(expRaw).split(/[|\n]/).map(s => s.trim()).filter(Boolean);
+    }
+
+    if (type === 'note') {
+      q.why = ctx.unknown
+        ? '原文题型「' + ctx.unknown + '」本库暂不支持自动判分，已按待确认收录；内容仅供参考。'
+        : '题型未确认，暂不参与判分。';
     }
 
     /* 解析统一包一层 (calc 的解析也保留一份) */
@@ -265,7 +286,7 @@
     for (const line of src.split('\n')) {
       const h = matchTypeHeader(line);
       if (h) {
-        cur = { type: h.type, lines: [] };
+        cur = { type: h.type, unknown: h.unknown || '', lines: [] };
         blocks.push(cur);
         if (h.rest) cur.lines.push(h.rest);   /* 【选择】1. 题干… 写在同一行 */
         continue;
@@ -279,9 +300,11 @@
 
     const questions = [];
     const errors = [];
+    const unregistered = [];   // 用了注册表里没有的题型（已降级为「待确认」）
     let seq = 0;
 
     blocks.forEach(block => {
+      if (block.type === '__ignore__') return;
       /* 多题拆分：遇到题号且上一段已有答案行，就切一刀 */
       const chunks = [];
       let buf = [];
@@ -298,7 +321,7 @@
         const textJoined = lines.join('\n').trim();
         if (!textJoined) return;
         seq += 1;
-        const q = parseChunk(lines, block.type, { defaultCh });
+        const q = parseChunk(lines, block.type, { defaultCh, unknown: block.unknown });
         const errs = validate(q, seq);
 
         /* 「缺少出处」只是建议，不阻断 */
@@ -309,6 +332,9 @@
         }
         q.id = idPrefix + String(seq).padStart(2, '0');
         q.warn = errs.length ? errs : [];
+        if (block.type === 'note' && block.unknown) {
+          unregistered.push({ index: seq, label: block.unknown, stem: q.q.slice(0, 30) });
+        }
         questions.push(q);
       });
     });
@@ -316,6 +342,7 @@
     return {
       questions,
       errors,
+      unregistered,
       stats: {
         total: seq,
         ok: questions.length,
