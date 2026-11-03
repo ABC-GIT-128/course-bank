@@ -24,6 +24,11 @@ jobs:
         with:
           node-version: 20
 
+      # 提交身份自检：真实邮箱会永久留在公开历史里，发现即警告（不阻断部署）
+      - name: 检查提交身份
+        continue-on-error: true
+        run: node scripts/check-author.js
+
       # 安全回归：恶意标题/题目不得以可执行形式进入产物
       - name: 安全回归测试
         run: node scripts/test-security.js

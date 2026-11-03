@@ -29,10 +29,13 @@ body:
       label: 下架理由
     validations:
       required: true
-  - type: input
+  - type: textarea
     id: contact
     attributes:
-      label: 联系方式
-      description: 邮箱或其它可回复的方式
+      label: 需要私下联系吗（选填）
+      description: |
+        ⚠ 请不要在这里填写手机号、邮箱、学号、真实姓名 —— Issue 是公开的，填了任何人（包括搜索引擎）都能看到，且无法真正删除。
+        如果必须私下沟通，写「需要私下联系」即可，维护者会通过 GitHub 私信或仓库主页公布的方式联系你。
+      placeholder: 留空即可；或写「需要私下联系」
     validations:
-      required: true
+      required: false
