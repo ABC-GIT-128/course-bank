@@ -30,7 +30,7 @@
   const TYPES = {
     choice: {
       name: '单项选择题',
-      chip: '选择',
+      chip: '单选',
       group: '客观题',
       tag: 't-choice',
       answer: '一个选项字母（A/B/C/D）',
@@ -76,9 +76,29 @@
       render: 'term',
       auto: true
     },
+    essay: {
+      name: '简答题',
+      chip: '简答',
+      group: '主观题',
+      tag: 't-essay',
+      answer: '按要点分条作答，提交后对照参考答案自评',
+      judge: 'self',
+      render: 'text',
+      auto: false
+    },
+    comp: {
+      name: '综合设计题',
+      chip: '综合',
+      group: '大题',
+      tag: 't-comp',
+      answer: '按小问分条作答，写清传感器选型、工作原理与系统组成',
+      judge: 'self',
+      render: 'text',
+      auto: false
+    },
     calc: {
       name: '计算题',
-      chip: '大题',
+      chip: '计算',
       group: '大题',
       tag: 't-calc',
       answer: '以数值开头并带单位；解析按步骤用 | 分隔',
@@ -100,7 +120,7 @@
   };
 
   /* 展示顺序（筛选栏与模板下拉都按这个顺序） */
-  const ORDER = ['choice', 'fill', 'tf', 'term', 'calc'];
+  const ORDER = ['choice', 'fill', 'tf', 'term', 'essay', 'calc', 'comp'];
 
   const BY_CHIP = {};
   ORDER.forEach(k => { BY_CHIP[TYPES[k].chip] = k; });
@@ -111,7 +131,10 @@
     '选择': 'choice', '单选': 'choice', '单项选择题': 'choice', '单项选择': 'choice',
     '填空': 'fill', '填空题': 'fill', '空': 'fill',
     '名词': 'term', '名词解释': 'term', '名词解释题': 'term', '术语': 'term',
-    '计算': 'calc', '计算题': 'calc', '大题': 'calc', '简答': 'calc', '简答题': 'calc'
+    '简答': 'essay', '简答题': 'essay',
+    '综合': 'comp', '综合题': 'comp', '综合设计': 'comp', '综合设计题': 'comp',
+    '综合设计分析题': 'comp', '设计题': 'comp',
+    '计算': 'calc', '计算题': 'calc', '大题': 'calc'
   };
 
   function typeOf(label) {

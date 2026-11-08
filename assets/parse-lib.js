@@ -205,6 +205,12 @@
       q.ansText = ansRaw ? String(ansRaw).trim() : '';
     }
 
+    if (type === 'essay' || type === 'comp') {
+      q.ansText = String(ansRaw).replace(/[ \t]+$/gm, '').trim();
+      q.points = String(kwRaw || '')
+        .split(/[|\n]/).map(x => x.trim()).filter(Boolean);
+    }
+
     if (type === 'calc') {
       const a = String(ansRaw).trim().split('\n')[0].trim();
       const v = Number(a.replace(/[^\d.eE+-]/g, ''));
@@ -265,6 +271,9 @@
     }
     if (q.type === 'term') {
       if (!q.kw || q.kw.length < 3) errs.push(tag + '：关键词不足 3 组（用 | 分隔，或在「关键词:」里列出）');
+    }
+    if (q.type === 'essay' || q.type === 'comp') {
+      if (!q.ansText) errs.push(tag + '：简答/综合题需要「答案：」给出参考答案');
     }
     if (q.type === 'calc') {
       if (!pending && isNaN(q.value)) errs.push(tag + '：计算题答案要以数值开头');

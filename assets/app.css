@@ -364,3 +364,12 @@ body.home main.wrap{flex:1}
 
 /* 待确认题：题干里保留的换行要能显示（选项各占一行） */
 .qtext{white-space:pre-line}
+
+/* 简答 / 综合题 */
+.tag.t-essay{background:#E8F1FD;color:#1D4ED8}
+.tag.t-comp{background:#F3E8FD;color:#6D28D9}
+.vd.wait{background:#f8fafc;border:1px solid #e2e8f0;color:#475569}
+.vd.wait .selftbns,.vd.wait .selfbtns{display:inline-flex;gap:6px;margin-left:10px}
+.vd.wait .tg.ok{background:#e8f7ee;color:#166534;border-color:#c6ead4}
+.refans{background:#fbfbfd;border-left:3px solid #c7cdfa;padding:9px 12px;border-radius:6px;
+  font-size:13px;line-height:1.85;color:#39405a;margin:6px 0 4px;white-space:pre-wrap}

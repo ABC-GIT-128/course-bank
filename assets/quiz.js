@@ -267,7 +267,8 @@ function renderChips(){
   /* 只列出"当前范围内有题"的题型，避免一排 0 */
   const items = [['all','全部',c.all]];
   if(keyN) items.push(['key','重点',keyN]);
-  ['choice','fill','term','calc','tf'].forEach(t => { if(c[t]) items.push([t, CHIP_LABEL[t], c[t]]); });
+  /* 用注册表的顺序，新增题型不用改这里 */
+  QT.ORDER.forEach(t => { if(c[t]) items.push([t, CHIP_LABEL[t], c[t]]); });
   if(pptN) items.push(['ppt','PPT 专节',pptN]);
   items.push(['wrong','错题本',Object.keys(state.wrongSet).length]);
   $('#chips').innerHTML = items.map(([k,l,n]) =>
@@ -298,6 +299,12 @@ function solHTML(q){
     } else {
       h += '<div class="kw">' + q.kw.map(g => '<span class="kwt">' + esc(g[0]) + '</span>').join('') + '</div>';
     }
+  } else if(q.type === 'essay' || q.type === 'comp'){
+    if(q.ansText) h += '<h5>参考答案</h5><div class="refans">' + rich(q.ansText) + '</div>';
+    if(q.points && q.points.length){
+      h += '<div class="kw">' + q.points.map(x => '<span class="kwt">' + esc(x) + '</span>').join('') + '</div>';
+    }
+    h += '<h5>解析</h5>' + rich(q.exp);
   } else if(q.type === 'tf'){
     h += '<h5>正确答案</h5><div class="answ">' + (q.ans ? '正确' : '错误') + '</div>';
     h += '<h5>解析</h5>' + rich(q.exp);
@@ -417,9 +424,13 @@ function cardHTML(q, i){
     h += '</div>';
   }
 
-  if(q.type === 'term'){
-    h += '<div class="hintline">写出要点即可，系统按关键词自动判分（命中 ' +
-      Math.max(2, Math.ceil(q.kw.length*.55)) + '/' + q.kw.length + ' 个要点算正确）</div>' +
+  if(q.type === 'term' || q.type === 'essay' || q.type === 'comp'){
+    const selfJudge = (q.type === 'essay' || q.type === 'comp');
+    const hint = selfJudge
+      ? '主观题：先把要点写下来，提交后对照参考答案自评'
+      : '写出要点即可，系统按关键词自动判分（命中 ' +
+        Math.max(2, Math.ceil(q.kw.length*.55)) + '/' + q.kw.length + ' 个要点算正确）';
+    h += '<div class="hintline">' + hint + '</div>' +
       '<textarea class="big" id="ta-' + q.id + '" placeholder="在这里写下你的答案…"' + (rec ? ' readonly' : '') + '>' +
       (rec ? esc(rec.user || '') : '') + '</textarea>';
   }
@@ -436,10 +447,16 @@ function cardHTML(q, i){
   }
 
   if(rec){
-    h += rec.ok
-      ? '<div class="vd ok"><span class="ic">✓</span>回答正确</div>'
-      : '<div class="vd bad"><span class="ic">✕</span>' + (rec.skip ? '已看答案（记为未掌握）' : '回答错误') +
-        '<span class="r">看下方解析订正</span></div>';
+    if(rec.pending){
+      h += '<div class="vd wait"><span class="ic">?</span>已提交，对照下方参考答案自评' +
+        '<span class="selfbtns"><button class="tg ok" data-act="self-ok">我答对了</button>' +
+        '<button class="tg" data-act="self-no">没答对</button></span></div>';
+    } else {
+      h += rec.ok
+        ? '<div class="vd ok"><span class="ic">✓</span>回答正确</div>'
+        : '<div class="vd bad"><span class="ic">✕</span>' + (rec.skip ? '已看答案（记为未掌握）' : '回答错误') +
+          '<span class="r">看下方解析订正</span></div>';
+    }
   }
 
   /* 课本类：把图片序号留在解析里，便于回去核对原图（不占出处行） */
@@ -501,6 +518,18 @@ function submit(ev, q, payload){
     const r = judgeTerm(q, payload);
     ok = r.ok; detail = r.hit;
     state.rec[q.id] = {ok, user:payload, detail};
+  } else if(q.type === 'essay' || q.type === 'comp'){
+    if(!payload.trim()){ toast(false,'先写点内容再提交哦'); return; }
+    state.rec[q.id] = {ok:false, user:payload, pending:true};
+    state.open[q.id] = true;
+    save();
+    replaceCard(q, ev);
+    window.setTimeout(() => {
+      const el = document.querySelector('.card[data-id="' + q.id + '"] .sol');
+      if(el) el.classList.add('open');
+    }, 60);
+    toast(true, '已提交，展开的参考答案里点一下自评');
+    return;
   } else {
     if(!String(payload).trim()){ toast(false,'先填写计算结果'); return; }
     ok = judgeCalc(q, payload);
@@ -526,7 +555,7 @@ function replaceCard(q, ev){
   tmp.innerHTML = cardHTML(q, i);
   const nw = tmp.firstElementChild;
   old.replaceWith(nw);
-  if(!state.rec[q.id].ok){
+  if(!state.rec[q.id].ok && !state.rec[q.id].pending){
     nw.classList.add('shake');
     setTimeout(() => {
       nw.classList.remove('shake');
@@ -562,6 +591,26 @@ $('#list').addEventListener('click', e => {
     return;
   }
 
+  /* 主观题自评：必须在「已答就 return」之前处理 */
+  if(e.target.closest('[data-act="self-ok"]')){
+    const r = state.rec[q.id]; if(!r || !r.pending) return;
+    r.pending = false; r.ok = true;
+    delete state.wrongSet[q.id];
+    state.open[q.id] = true;
+    save(); replaceCard(q, e); renderChips(); refreshStats();
+    toast(true, '已记为答对');
+    return;
+  }
+  if(e.target.closest('[data-act="self-no"]')){
+    const r = state.rec[q.id]; if(!r || !r.pending) return;
+    r.pending = false; r.ok = false;
+    state.wrongSet[q.id] = 1;
+    state.open[q.id] = true;
+    save(); replaceCard(q, e); renderChips(); refreshStats();
+    toast(false, '已记为答错，加入错题本');
+    return;
+  }
+
   if(state.rec[q.id]) return;
 
   const tf = e.target.closest('[data-tf]');
@@ -575,7 +624,7 @@ $('#list').addEventListener('click', e => {
       const vals = [...card.querySelectorAll('.fillinput')].map(el => el.value);
       if(vals.every(v => !v.trim())){ toast(false,'先填一下答案吧'); return; }
       submit(e, q, vals);
-    } else if(q.type === 'term'){
+    } else if(q.type === 'term' || q.type === 'essay' || q.type === 'comp'){
       submit(e, q, card.querySelector('textarea').value);
     } else if(q.type === 'calc'){
       submit(e, q, card.querySelector('.numinput').value);
