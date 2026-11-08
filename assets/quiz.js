@@ -221,7 +221,10 @@ function renderSrcBar(){
 
   const years = [...new Set(sources.map(s => s.year || ((course.terms || [])[0])).filter(Boolean))];
   const kinds = [...new Set(sources.map(s => s.kind || 'doc'))];
-  const docs = sources.filter(s => state.kind === 'all' || (s.kind || 'doc') === state.kind);
+  /* 只列出当前题库里真的用到的资料，避免出现「0 题」的空选项 */
+  const used = {};
+  BANK.forEach(q => { if(q.doc) used[q.doc] = 1; });
+  const docs = sources.filter(s => used[s.id] && (state.kind === 'all' || (s.kind || 'doc') === state.kind));
 
   let h = '';
   if(years.length > 1){
