@@ -123,7 +123,8 @@ function scopedList(){
       if(!s) return false;
       if((s.kind || 'doc') !== state.kind) return false;
     }
-    if(state.doc !== 'all' && q.doc !== state.doc) return false;
+    if(state.doc !== 'all' && q.doc !== state.doc &&
+       !((q.also || []).indexOf(state.doc) >= 0)) return false;
     if(state.year !== 'all'){
       const y = (s && s.year) || ((window.OC && window.OC.course && window.OC.course.terms) || [])[0];
       if(y !== state.year) return false;
@@ -223,7 +224,12 @@ function renderSrcBar(){
   const kinds = [...new Set(sources.map(s => s.kind || 'doc'))];
   /* 只列出当前题库里真的用到的资料，避免出现「0 题」的空选项 */
   const used = {};
-  BANK.forEach(q => { if(q.doc) used[q.doc] = 1; });
+  BANK.forEach(q => {
+    if(q.doc) used[q.doc] = 1;
+    (q.also || []).forEach(d => { used[d] = 1; });
+  });
+  /* 某份资料下的题量 = 主来源是它 + 也收录在它里面的题 */
+  const countOf = id => BANK.filter(q => q.doc === id || (q.also || []).indexOf(id) >= 0).length;
   const docs = sources.filter(s => used[s.id] && (state.kind === 'all' || (s.kind || 'doc') === state.kind));
 
   let h = '';
@@ -237,10 +243,11 @@ function renderSrcBar(){
     .map(([k,l]) => '<button class="kchip' + (state.kind === k ? ' on' : '') + '" data-k="' + k + '">' + l + '</button>')
     .join('') + '</div>';
 
-  const total = BANK.filter(q => docs.some(x => x.id === q.doc)).length;
+  const total = BANK.filter(q => docs.some(x =>
+    q.doc === x.id || (q.also || []).indexOf(x.id) >= 0)).length;
   h += '<select class="srcsel" data-sel="doc"><option value="all">全部资料（' + total + ' 题）</option>' +
     docs.map(x => {
-      const n = BANK.filter(q => q.doc === x.id).length;
+      const n = countOf(x.id);
       return '<option value="' + esc(x.id) + '"' + (state.doc === x.id ? ' selected' : '') + '>' +
         esc(x.name) + ' · ' + n + ' 题</option>';
     }).join('') + '</select>';
