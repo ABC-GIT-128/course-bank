@@ -94,6 +94,8 @@ for (const f of files) {
     hidden: hiddenIds.length,
     tags: tags,
     keywords: c.keywords || [],
+    files: (c.files || []).map(f => ({ name: f.name, path: f.path, size: f.size || 0, kind: f.kind || '', pages: f.pages || 0, note: f.note || '' })),
+    fileCount: (c.files || []).length,
     status: status,
     statusReason: ov.reason || '',
     statusAt: ov.at || '',

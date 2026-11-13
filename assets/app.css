@@ -373,3 +373,27 @@ body.home main.wrap{flex:1}
 .vd.wait .tg.ok{background:#e8f7ee;color:#166534;border-color:#c6ead4}
 .refans{background:#fbfbfd;border-left:3px solid #c7cdfa;padding:9px 12px;border-radius:6px;
   font-size:13px;line-height:1.85;color:#39405a;margin:6px 0 4px;white-space:pre-wrap}
+
+/* ---------- 课程资料（原文件下载） ---------- */
+.filewrap{max-width:900px;margin:14px auto 0;padding:0 14px}
+.filehd{display:flex;align-items:baseline;gap:8px;font-size:13px;color:#4b5563;margin-bottom:8px}
+.filehd b{color:#111827}
+.filehd .filetip{margin-left:auto;font-size:11.5px;color:#9aa3b2}
+.filelist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.fitem{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);
+  border-radius:10px;background:#fff;text-decoration:none;color:inherit}
+.fitem:hover{background:#f7f8fc;border-color:#d7dbee}
+.fkind{flex:0 0 auto;font-size:10.5px;font-weight:700;letter-spacing:.03em;padding:3px 7px;border-radius:6px}
+.fk-pdf{background:#FCEBEB;color:#A32D2D}
+.fk-docx{background:#E6F1FB;color:#185FA5}
+.fk-file{background:#eef0f6;color:#4b5563}
+.fmain{min-width:0;display:flex;flex-direction:column;gap:2px}
+.fname{font-size:13.5px;color:#1f2430;word-break:break-all}
+.fnote{font-size:11.5px;color:#8a93a6}
+.fmeta{flex:0 0 auto;margin-left:auto;font-size:11.5px;color:#9aa3b2;white-space:nowrap}
+@media(max-width:520px){
+  .fmeta{display:none}
+  .fname{font-size:13px}
+}
+/* 空题库提示 */
+.empty{padding:38px 16px;text-align:center;color:#6b7280;line-height:2}

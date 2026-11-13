@@ -689,8 +689,21 @@ $('#fab').onclick = () => {
 /* ============================ 启动 ============================ */
 load();
 $('#btnShuffle').classList.toggle('on', state.shuffled);
-renderSrcBar();
-if(!window.__OC_BLOCKED){ renderChips(); buildList(); renderAll(); }
+if(!BANK.length){
+  /* 只有资料、没有题目的课程：隐藏刷题控件，说明现状 */
+  const el = document.getElementById('list');
+  if(el) el.innerHTML = '<div class="empty">这门课目前只有课程资料，题库还没有内容。' +
+    '<br>上面的「课程资料」可以直接下载查看。' +
+    '<br><a href="index.html">返回全部课程</a></div>';
+  const sb = document.getElementById('srcbar'); if(sb) sb.style.display = 'none';
+  const ch = document.getElementById('chips'); if(ch) ch.style.display = 'none';
+  const fab = document.getElementById('fab'); if(fab) fab.style.display = 'none';
+  const bar = document.getElementById('bar'); if(bar) bar.style.width = '0%';
+  const stat = document.getElementById('stat'); if(stat) stat.textContent = '暂无题目';
+} else {
+  renderSrcBar();
+  if(!window.__OC_BLOCKED){ renderChips(); buildList(); renderAll(); }
+}
 
 (function bindSrcBar(){
   const box = document.getElementById('srcbar');
@@ -719,3 +732,24 @@ window.addEventListener('scroll', () => {
 }, {passive:true});
 window.addEventListener('beforeunload', save);
 window.addEventListener('resize', () => refreshStats());
+
+/* ---------- 课程资料（原文件下载） ---------- */
+(function(){
+  const box = document.getElementById('filesbox');
+  const files = (COURSE && COURSE.files) || [];
+  if(!box) return;
+  if(!files.length){ box.hidden = true; return; }
+  box.hidden = false;
+  const size = n => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB'
+                                 : Math.max(1, Math.round(n / 1024)) + ' KB';
+  const icon = k => (k === 'pdf' ? 'PDF' : k === 'docx' ? 'DOC' : 'FILE');
+  box.innerHTML = '<div class="filehd">课程资料 <b>' + files.length + '</b> 份' +
+      '<span class="filetip">原件可直接下载</span></div>' +
+    '<ul class="filelist">' + files.map(f =>
+      '<li><a class="fitem" href="' + esc(f.path) + '" download rel="noopener">' +
+        '<span class="fkind fk-' + esc(f.kind || 'file') + '">' + icon(f.kind) + '</span>' +
+        '<span class="fmain"><span class="fname">' + esc(f.name) + '</span>' +
+        (f.note ? '<span class="fnote">' + esc(f.note) + '</span>' : '') + '</span>' +
+        '<span class="fmeta">' + size(f.size || 0) + (f.pages ? ' · ' + f.pages + ' 页' : '') + '</span>' +
+      '</a></li>').join('') + '</ul>';
+})();

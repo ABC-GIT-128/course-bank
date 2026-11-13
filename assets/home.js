@@ -57,7 +57,10 @@
     return '<a class="ccard' + (c.status === 'archived' ? ' is-arc' : '') + '" href="' + encodeURIComponent(c.id) + '/">' +
       '<div class="cchd"><h3>' + esc(c.title) + '</h3>' + terms + '</div>' +
       '<p class="ccsub">' + esc(c.subtitle || '') + '</p>' +
-      '<p class="ccmeta">' + esc(c.college) + ' · <b>' + c.count + '</b> 题 · ' + c.chapters.length + ' 章 · 更新 ' + esc(c.updatedAt) + '</p>' +
+      '<p class="ccmeta">' + esc(c.college) + ' · ' +
+        (c.count ? '<b>' + c.count + '</b> 题' : '<b>' + (c.fileCount || 0) + '</b> 份资料') +
+        (c.count ? ' · ' + c.chapters.length + ' 章' : '') +
+        ' · 更新 ' + esc(c.updatedAt) + '</p>' +
       '<p class="cctypes">' + esc(typeLine) + (hid ? ' · ' + hid : '') + '</p>' +
       '<div class="ccfoot">' + tagOf(c) + '<span class="go">' + (c.status === 'archived' ? '查看归档 →' : '开始练习 →') + '</span></div>' +
       '</a>';
