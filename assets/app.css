@@ -444,9 +444,10 @@ body{padding-bottom:64px}
 .fishbubble.m-angry .fhearts::before{content:'〰〰〰'}
 
 /* 睡觉的 Zzz */
-.fzzz{position:absolute;top:2px;right:2px;font-size:11px;font-weight:700;color:#8a93a6;opacity:0;pointer-events:none}
-.fz2{right:10px;top:-4px;font-size:9px}
-.fz3{right:16px;top:-11px;font-size:8px}
+.fzzz{position:absolute;top:-6px;right:-2px;font-size:15px;font-weight:800;color:#5b6472;opacity:0;pointer-events:none;
+  text-shadow:0 1px 0 #fff}
+.fz2{right:5px;top:-13px;font-size:12px}
+.fz3{right:11px;top:-19px;font-size:10px}
 
 /* 动效关键帧 */
 @keyframes fishShake{
@@ -475,9 +476,9 @@ body{padding-bottom:64px}
 }
 
 @keyframes zzzFloat{
-  0%{opacity:0;transform:translate(0,4px) rotate(-6deg)}
-  30%{opacity:.95}
-  100%{opacity:0;transform:translate(10px,-14px) rotate(6deg)}
+  0%{opacity:.95;transform:translate(0,3px) rotate(-6deg)}
+  60%{opacity:.7;transform:translate(6px,-8px) rotate(2deg)}
+  100%{opacity:0;transform:translate(11px,-16px) rotate(7deg)}
 }
 .fish-sleep .femoji{filter:grayscale(.55);opacity:.8;animation:fishBreath 2.6s ease-in-out infinite}
 .fish-sleep .fzzz{animation:zzzFloat 2.6s ease-in-out infinite}
