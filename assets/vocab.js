@@ -1,14 +1,21 @@
-/* 英语四级 · 背单词
- * - 词库自己录（单条 / 批量粘贴），存 localStorage
- * - 简化 SM-2：认识 → 间隔 1/3/7/15/30 天；模糊 → 保持、明天再来；不认识 → 归零、明天再来
- * - 每天 10 个新词上限，复习优先
- * - 与全局大肥鱼联动：认识算一次连对，不认识算一次答错
+/* 英语四级 · 背单词（12 单元 × 4 课 + 艾宾浩斯按课复习）
+ *
+ * 设计要点
+ * - 词库自己录；单词按录入顺序自动填进 48 课（每课 N 个，可调）
+ * - 复习以「课」为单位：勾一下就算复习完，不逐词排期
+ * - 遗忘曲线：学完当天算第 0 天，之后第 1、3、7、14、29 天各复习一次，第 5 次复习完成即「已完成」
+ * - 到期未复习会一直留在「今天」列表里，并标出逾期天数
  */
 (function () {
-  const K_WORDS = 'oc_vocab_words';
-  const K_CFG = 'oc_vocab_cfg';
-  const IV = [0, 1, 3, 7, 15, 30];   /* box 0~5 对应的间隔天数：第一次认识 → 明天，再 → 3 天… */
-  const BOX_MAX = 5;
+  const K_W = 'oc_vocab_words';
+  const K_L = 'oc_vocab_lessons';
+  const K_C = 'oc_vocab_cfg';
+
+  const UNITS = 12;
+  const PER_UNIT = 4;
+  const TOTAL = UNITS * PER_UNIT;          /* 48 课 */
+  const OFF = [1, 3, 7, 14, 29];           /* 累计天数：+1 / +3 / +7 / +14 / +29 */
+
   const $ = s => document.querySelector(s);
   const esc = s => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -22,159 +29,289 @@
     d.setDate(d.getDate() + n);
     return ymd(d);
   }
+  function diffDays(from, to) {
+    const a = new Date(from + 'T00:00:00'), b = new Date(to + 'T00:00:00');
+    return Math.round((b - a) / 86400000);
+  }
 
   /* ---------- 存储 ---------- */
-  function loadWords() {
+  function loadJSON(k, dflt) {
     try {
-      const v = JSON.parse(localStorage.getItem(K_WORDS) || '[]');
-      return Array.isArray(v) ? v.filter(w => w && w.en && w.zh) : [];
-    } catch (e) { return []; }
+      const v = JSON.parse(localStorage.getItem(k) || 'null');
+      return v == null ? dflt : v;
+    } catch (e) { return dflt; }
   }
-  function loadCfg() {
-    let c = {};
-    try { c = JSON.parse(localStorage.getItem(K_CFG) || '{}'); } catch (e) {}
-    return { dailyNew: Number(c.dailyNew) > 0 ? Number(c.dailyNew) : 10 };
-  }
+  let words = loadJSON(K_W, []);
+  if (!Array.isArray(words)) words = [];
+  let lessons = loadJSON(K_L, {});
+  if (!lessons || typeof lessons !== 'object') lessons = {};
+  let cfg = loadJSON(K_C, {});
+  const perLesson = Number(cfg.perLesson) > 0 ? Number(cfg.perLesson) : 25;
 
-  let words = loadWords();
-  const cfg = loadCfg();
-
-  /* 写盘防抖（连续作答时合并） */
   const debounce = (window.OCFish && window.OCFish.debounce)
     ? window.OCFish.debounce
     : function (fn, wait) { let t; return function () { const a = arguments; clearTimeout(t); t = setTimeout(() => fn.apply(null, a), wait); }; };
-  const persist = debounce(() => {
-    try { localStorage.setItem(K_WORDS, JSON.stringify(words)); } catch (e) {}
+
+  const saveWords = debounce(() => {
+    try { localStorage.setItem(K_W, JSON.stringify(words)); } catch (e) {}
   }, 250);
-  function persistNow() {
-    try { localStorage.setItem(K_WORDS, JSON.stringify(words)); } catch (e) {}
+  const saveLessons = debounce(() => {
+    try { localStorage.setItem(K_L, JSON.stringify(lessons)); } catch (e) {}
+  }, 150);
+  function saveAllNow() {
+    try { localStorage.setItem(K_W, JSON.stringify(words)); } catch (e) {}
+    try { localStorage.setItem(K_L, JSON.stringify(lessons)); } catch (e) {}
   }
 
-  /* ---------- 队列 ---------- */
-  let queue = [];
-  let pos = 0;
-  let flipped = false;
-  let answered = 0;
-  let session = { yes: 0, fuzzy: 0, no: 0 };
+  /* ---------- 课 id 与单词归属 ---------- */
+  const lessonId = (u, l) => u + '-' + l;
+  function parseId(id) {
+    const p = String(id).split('-');
+    return { u: Number(p[0]), l: Number(p[1]) };
+  }
+  const label = id => {
+    const { u, l } = parseId(id);
+    return 'U' + u + ' · L' + l;
+  };
 
-  function newQuotaLeft() {
+  function bucket(wordsPerLesson) {
+    /* 按录入顺序分桶；已有 lsn 的保持不动 */
+    const order = words.slice().sort((a, b) => (a.added || '') < (b.added || '') ? -1 : 1);
+    let next = 0;
+    const counts = new Array(TOTAL).fill(0);
+    words.forEach(w => { if (typeof w.lsn === 'number' && w.lsn >= 0) counts[w.lsn]++; });
+    order.forEach(w => {
+      if (typeof w.lsn === 'number' && w.lsn >= 0 && w.lsn < TOTAL) return;
+      while (next < TOTAL && counts[next] >= wordsPerLesson) next++;
+      if (next >= TOTAL) { w.lsn = -1; return; }
+      w.lsn = next;
+      counts[next]++;
+    });
+  }
+  bucket(perLesson);
+
+  function slotOf(id) {
+    const { u, l } = parseId(id);
+    return (u - 1) * PER_UNIT + (l - 1);
+  }
+  function wordsOf(id) {
+    const idx = slotOf(id);
+    return words.filter(w => w.lsn === idx);
+  }
+  function countOf(id) {
+    const idx = slotOf(id);
+    return words.filter(w => w.lsn === idx).length;
+  }
+
+  /* ---------- 状态 ---------- */
+  const t0 = today();
+  function stateOf(id) {
+    const rec = lessons[id];
+    const n = countOf(id);
+    if (!n) return { key: 'empty', text: '没有单词' };
+    if (!rec || !rec.at) return { key: 'new', text: '未学' };
+    if (rec.round >= OFF.length) return { key: 'done', text: '已完成' };
+    if (rec.due && rec.due <= t0) {
+      const late = diffDays(rec.due, t0);
+      return { key: 'due', text: '待复习' + (late > 0 ? '（逾期 ' + late + ' 天）' : ''), late: late };
+    }
+    return { key: 'wait', text: '下次 ' + (rec.due || '—') };
+  }
+
+  function dueList() {
+    return Object.keys(lessons)
+      .filter(id => lessons[id] && lessons[id].at && lessons[id].round < OFF.length &&
+        lessons[id].due && lessons[id].due <= t0)
+      .sort((a, b) => (lessons[a].due < lessons[b].due ? -1 : 1));
+  }
+
+  function nextNewLesson() {
+    for (let u = 1; u <= UNITS; u++) {
+      for (let l = 1; l <= PER_UNIT; l++) {
+        const id = lessonId(u, l);
+        if (!lessons[id] && countOf(id) > 0) return id;
+      }
+    }
+    return '';
+  }
+
+  function progress() {
+    let n = 0;
+    for (let u = 1; u <= UNITS; u++) for (let l = 1; l <= PER_UNIT; l++) {
+      if (lessons[lessonId(u, l)]) n++;
+    }
+    return n;
+  }
+
+  /* ---------- 顶部信息 ---------- */
+  function updateHead() {
+    const d = new Date();
+    $('#vday').textContent = (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日';
+    const due = dueList().length;
+    const learned = progress();
+    $('#stat').textContent = '已学 ' + learned + '/' + TOTAL + ' 课 · 今日待复习 ' + due +
+      ' · 词库 ' + words.length + ' 词';
+    $('#bar').style.width = Math.round(learned / TOTAL * 100) + '%';
+    $('#capTip').textContent = '每课 ' + perLesson + ' 词 · 总容量 ' + TOTAL * perLesson + ' 词';
+  }
+
+  /* ---------- 今日 ---------- */
+  function renderToday() {
+    const list = dueList();
+    $('#dueCount').textContent = list.length;
+    $('#dueEmpty').hidden = list.length > 0;
+    $('#dueList').innerHTML = list.map(id => {
+      const rec = lessons[id];
+      const st = stateOf(id);
+      return '<li data-due="' + id + '">' +
+        '<span class="dname">' + label(id) + '<i class="dround">第 ' + (rec.round + 1) + ' 次复习</i></span>' +
+        '<span class="dmeta">' + (st.late > 0 ? '<b class="late">逾期 ' + st.late + ' 天</b>' : '今天到期') +
+        ' · 上次 ' + ((rec.hist && rec.hist.length) ? rec.hist[rec.hist.length - 1] : rec.at) + '</span>' +
+        '<button class="btn plain dbtn" data-done="' + id + '">已复习</button>' +
+        '</li>';
+    }).join('');
+
+    const nx = nextNewLesson();
+    const nxEl = $('#nextLesson');
+    if (nx) {
+      nxEl.textContent = label(nx) + '（' + countOf(nx) + ' 词）';
+      $('#btnLearn').disabled = false;
+      $('#btnLearn').textContent = '开始学这一课';
+    } else if (words.length && progress() >= TOTAL) {
+      nxEl.textContent = '48 课都学过了';
+      $('#btnLearn').disabled = true;
+      $('#btnLearn').textContent = '没有新课';
+    } else {
+      nxEl.textContent = '词库还没单词';
+      $('#btnLearn').disabled = true;
+      $('#btnLearn').textContent = '先加单词';
+    }
+
+    $('#todayTip').textContent = list.length ? '先复习，再学新的' : (nx ? '今天没有到期复习' : '');
+    updateHead();
+  }
+
+  /* ---------- 课程表 ---------- */
+  function unitRow(u, editable, selected) {
+    let cells = '';
+    for (let l = 1; l <= PER_UNIT; l++) {
+      const id = lessonId(u, l);
+      const st = stateOf(id);
+      const n = countOf(id);
+      const on = !!(selected && selected.indexOf(id) >= 0);
+      const dis = editable ? (st.key === 'empty' || (st.key !== 'new' && !on)) : false;
+      cells += '<button class="lsn st-' + st.key + (on ? ' on' : '') + (dis ? ' dis' : '') + '"' +
+        ' data-lsn="' + id + '"' + (dis ? ' disabled' : '') +
+        ' title="' + esc(label(id) + ' · ' + st.text + ' · ' + n + ' 词') + '">' +
+        'L' + l + '<i>' + (st.key === 'empty' ? '空' : n + ' 词') + '</i>' +
+        '</button>';
+    }
+    return '<div class="unit"><span class="uname">U' + u + '</span><div class="ulsn">' + cells + '</div></div>';
+  }
+
+  function renderPlan() {
+    let html = '';
+    for (let u = 1; u <= UNITS; u++) html += unitRow(u, false, null);
+    $('#units').innerHTML = html;
+  }
+
+  /* ---------- 勾选面板 ---------- */
+  let picked = [];
+  function renderPick() {
+    let html = '';
+    for (let u = 1; u <= UNITS; u++) html += unitRow(u, true, picked);
+    $('#pickUnits').innerHTML = html;
+    $('#pickN').textContent = picked.length;
+  }
+
+  /* ---------- 课程记录 ---------- */
+  function markLearned(id) {
     const t = today();
-    const used = words.filter(w => w.firstAt === t).length;
-    return Math.max(0, cfg.dailyNew - used);
+    const rec = lessons[id];
+    if (rec && rec.at) return reviewDone(id);      /* 学过就当作复习 */
+    lessons[id] = { at: t, round: 0, due: addDays(t, OFF[0]), hist: [t] };
+    saveLessons();
+    return 'learned';
+  }
+  function reviewDone(id) {
+    const rec = lessons[id];
+    if (!rec || !rec.at) return '';
+    /* 今天已经复习过就不再推进，避免连点把整轮刷完 */
+    const hist = rec.hist || [rec.at];
+    if (hist[hist.length - 1] === today()) return 'same-day';
+    rec.round = (rec.round || 0) + 1;
+    rec.hist = rec.hist || [rec.at];
+    rec.hist.push(today());
+    if (rec.round >= OFF.length) {
+      rec.due = '';
+      rec.finishedAt = today();
+    } else {
+      rec.due = addDays(rec.at, OFF[rec.round]);
+    }
+    saveLessons();
+    return 'reviewed';
   }
 
-  function buildQueue() {
-    const t = today();
-    const review = words
-      .filter(w => w.learned && w.due && w.due <= t)
-      .sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0));
-    const fresh = words.filter(w => !w.learned).slice(0, newQuotaLeft());
-    queue = review.concat(fresh);
-    pos = 0; answered = 0; session = { yes: 0, fuzzy: 0, no: 0 };
+  /* ---------- 学习模式 ---------- */
+  let study = { id: '', words: [], pos: 0, flipped: false, stat: { yes: 0, fuzzy: 0, no: 0 } };
+
+  function openStudy(id) {
+    const ws = wordsOf(id);
+    if (!ws.length) return;
+    study = { id: id, words: ws, pos: 0, flipped: false, stat: { yes: 0, fuzzy: 0, no: 0 } };
+    $('#study').hidden = false;
+    $('#vdone').hidden = true;
+    $('#vcard').style.display = '';
+    $('#vbtns').hidden = true;
+    $('#studyTitle').textContent = label(id) + ' · 共 ' + ws.length + ' 词';
+    $('#study').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    showCard();
   }
-
-  /* ---------- 渲染卡片 ---------- */
-  const cardEl = $('#vcard');
-  const btnsEl = $('#vbtns');
-  const nextEl = $('#vnext');
-  const doneEl = $('#vdone');
-  const studyEl = $('#study');
-
-  function current() { return queue[pos]; }
-
-  function renderCard() {
-    const w = current();
-    if (!w) { showDone(); return; }
-    flipped = false;
-    cardEl.classList.remove('flipped');
-    btnsEl.hidden = true;
-    nextEl.hidden = true;
-    doneEl.hidden = true;
-
-    $('#vtag').textContent = w.learned ? ('第 ' + (w.reps + 1) + ' 次') : '新词';
+  function closeStudy() {
+    $('#study').hidden = true;
+    renderAll();
+  }
+  function showCard() {
+    const w = study.words[study.pos];
+    if (!w) { finishStudy(); return; }
+    study.flipped = false;
+    $('#vcard').classList.remove('flipped');
+    $('#vbtns').hidden = true;
+    $('#vtag').textContent = (study.pos + 1) + ' / ' + study.words.length;
     $('#ven').textContent = w.en;
     $('#vph').textContent = w.ph ? '/' + w.ph + '/' : '';
     $('#vzh').textContent = w.zh;
-    const dueTxt = w.learned ? ('上次 ' + (w.last || '—') + ' · 已复习 ' + w.reps + ' 次') : '第一次见';
-    $('#vmeta').textContent = dueTxt + (w.lapses ? (' · 忘过 ' + w.lapses + ' 次') : '');
-    updateStat();
+    $('#vmeta').textContent = (w.lapses ? '记错过 ' + w.lapses + ' 次 · ' : '') + label(study.id);
+    $('#studyProgress').textContent = (study.pos + 1) + ' / ' + study.words.length;
   }
-
-  function flip() {
-    if (flipped || !current()) return;
-    flipped = true;
-    cardEl.classList.add('flipped');
-    btnsEl.hidden = false;
-  }
-
-  function updateStat() {
-    const t = today();
-    const dueN = words.filter(w => w.learned && w.due && w.due <= t).length;
-    const freshN = words.filter(w => !w.learned).length;
-    const total = queue.length || 1;
-    $('#bar').style.width = Math.round(answered / total * 100) + '%';
-    $('#stat').textContent = '本轮 ' + answered + '/' + queue.length +
-      ' · 待复习 ' + dueN + ' · 未学 ' + freshN + ' · 词库 ' + words.length;
-    const d = new Date();
-    $('#vday').textContent = (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日';
-  }
-
-  /* ---------- 作答 ---------- */
   function answer(kind) {
-    const w = current();
-    if (!w || !flipped) return;
-    const t = today();
+    if (!study.flipped) return;
+    const w = study.words[study.pos];
     w.reps = (w.reps || 0) + 1;
-    w.last = t;
-    w.firstAt = w.firstAt || t;
-    w.learned = true;
-
     if (kind === 'yes') {
-      w.box = Math.min((w.box || 0) + 1, BOX_MAX);
-      w.due = addDays(t, IV[w.box]);
-      session.yes++;
+      w.learned = true;
+      study.stat.yes++;
       if (window.OCFish) window.OCFish.correct();
     } else if (kind === 'fuzzy') {
-      w.due = addDays(t, 1);
-      session.fuzzy++;
+      w.learned = true;
+      study.stat.fuzzy++;
     } else {
-      w.box = 0;
-      w.due = addDays(t, 1);
       w.lapses = (w.lapses || 0) + 1;
-      session.no++;
+      study.stat.no++;
       if (window.OCFish) window.OCFish.wrong();
     }
-
-    answered++;
-    persist();
-    pos++;
-    if (pos >= queue.length) showDone();
-    else { renderCard(); }
+    saveWords();
+    study.pos++;
+    if (study.pos >= study.words.length) finishStudy(); else showCard();
   }
-
-  function showDone() {
-    cardEl.style.display = 'none';
-    btnsEl.hidden = true;
-    nextEl.hidden = true;
-    doneEl.hidden = false;
-    $('#bar').style.width = '100%';
-    const t = today();
-    const tomorrow = addDays(t, 1);
-    const dueN = words.filter(w => w.due === tomorrow).length;
-    const laterN = words.filter(w => w.due > tomorrow).length;
-    const freshN = words.filter(w => !w.learned).length;
-    $('#vdoneText').textContent =
-      '认识 ' + session.yes + ' · 模糊 ' + session.fuzzy + ' · 不认识 ' + session.no +
-      '。明天要复习 ' + dueN + ' 个' + (laterN ? '，之后还有 ' + laterN + ' 个排着' : '') +
-      '，词库里还有 ' + freshN + ' 个没学。';
-    if (!queue.length) {
-      $('#vdoneText').textContent = words.length
-        ? '今天的复习都做完了，也没有新词可以学（每日上限 ' + cfg.dailyNew + ' 个）。'
-        : '词库还是空的，先在下面「添加单词」里粘一批进来吧。';
-    } else if (pos > 0 && window.OCFish && answered > 0) {
-      window.OCFish.say('今日任务搞定，肥鱼允许你去玩会儿游戏！', 'super');
-    }
-    updateStat();
+  function finishStudy() {
+    $('#vcard').style.display = 'none';
+    $('#vbtns').hidden = true;
+    $('#vdone').hidden = false;
+    const s = study.stat;
+    $('#vdoneText').textContent = '认识 ' + s.yes + ' · 模糊 ' + s.fuzzy + ' · 不认识 ' + s.no +
+      '。记下来之后，明天会自动出现在复习列表里。';
+    $('#studyProgress').textContent = study.words.length + ' / ' + study.words.length;
   }
 
   /* ---------- 解析一行 ---------- */
@@ -196,7 +333,6 @@
       const i = line.search(/[,，;；]/);
       en = line.slice(0, i); zh = line.slice(i + 1);
     } else {
-      /* 英文在前、中文在后：以第一个汉字为分界，能处理 give up 放弃 这种词组 */
       const i = line.search(/[\u4e00-\u9fa5]/);
       if (i > 0) { en = line.slice(0, i); zh = line.slice(i); }
       else {
@@ -212,54 +348,129 @@
     return { en: en.replace(/\s{2,}/g, ' '), zh: zh, ph: ph };
   }
 
+  function countIn(l) { return words.filter(w => w.lsn === l).length; }
+
   function addWords(list) {
     const exists = {};
     words.forEach(w => { exists[w.en.toLowerCase()] = 1; });
     const t = today();
-    let added = 0, dup = 0, bad = 0;
+    let added = 0, dup = 0, bad = 0, over = 0;
+
     list.forEach(item => {
       const rec = typeof item === 'string' ? parseLine(item) : item;
       if (!rec) { bad++; return; }
       const key = rec.en.toLowerCase();
       if (exists[key]) { dup++; return; }
       exists[key] = 1;
+
+      let slot = -1;
+      for (let i = 0; i < TOTAL; i++) { if (countIn(i) < perLesson) { slot = i; break; } }
+      if (slot < 0) { over++; return; }
+
       words.push({
         id: 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         en: rec.en, zh: rec.zh, ph: rec.ph || '',
-        box: 0, due: t, reps: 0, lapses: 0, learned: false,
-        added: t, firstAt: ''
+        lsn: slot, reps: 0, lapses: 0, learned: false,
+        added: t
       });
       added++;
     });
-    persistNow();
-    renderBank();
-    buildQueue();
-    renderCard();
-    return { added, dup, bad };
+
+    saveAllNow();
+    renderAll();
+    return { added, dup, bad, over };
   }
 
   /* ---------- 词库列表 ---------- */
   function renderBank() {
     $('#bankCount').textContent = words.length + ' 词';
-    $('#vwords').innerHTML = words.slice(0, 300).map(w =>
-      '<li><b>' + esc(w.en) + '</b> <span class="vz">' + esc(w.zh) + '</span>' +
-      (w.learned ? '<i class="vbox">第' + (w.box + 1) + '档</i>' : '<i class="vbox new">未学</i>') +
-      '<button class="vdel" data-del="' + esc(w.id) + '" title="删除">×</button></li>'
-    ).join('') || '<li class="muted">还没有单词</li>';
+    const sorted = words.slice().sort((a, b) => (a.lsn || 0) - (b.lsn || 0));
+    $('#vwords').innerHTML = sorted.slice(0, 300).map(w => {
+      const id = (typeof w.lsn === 'number' && w.lsn >= 0)
+        ? lessonId(Math.floor(w.lsn / PER_UNIT) + 1, w.lsn % PER_UNIT + 1) : '';
+      return '<li><b>' + esc(w.en) + '</b><span class="vz">' + esc(w.zh) + '</span>' +
+        (id ? '<i class="vbox">' + label(id) + '</i>' : '<i class="vbox new">未分课</i>') +
+        (w.lapses ? '<i class="vbox new">错' + w.lapses + '</i>' : '') +
+        '<button class="vdel" data-del="' + esc(w.id) + '" title="删除">×</button></li>';
+    }).join('') || '<li class="muted">还没有单词</li>';
+  }
+
+  function renderAll() {
+    renderToday();
+    renderPlan();
+    renderBank();
+    if (!$('#pickBox').hidden) renderPick();
   }
 
   /* ---------- 事件 ---------- */
-  cardEl.addEventListener('click', flip);
-  btnsEl.addEventListener('click', e => {
+  $('#vcard').addEventListener('click', () => {
+    if (study.flipped) return;
+    study.flipped = true;
+    $('#vcard').classList.add('flipped');
+    $('#vbtns').hidden = false;
+  });
+  $('#vbtns').addEventListener('click', e => {
     const b = e.target.closest('[data-k]');
     if (b) answer(b.getAttribute('data-k'));
   });
-  $('#btnNext').addEventListener('click', () => { pos++; if (pos >= queue.length) showDone(); else renderCard(); });
-  $('#btnAgain').addEventListener('click', () => {
-    cardEl.style.display = '';
-    buildQueue();
-    if (!queue.length) { showDone(); return; }
-    renderCard();
+  $('#btnLearn').addEventListener('click', () => {
+    const nx = nextNewLesson();
+    if (nx) openStudy(nx);
+  });
+  $('#btnStudyExit').addEventListener('click', closeStudy);
+  $('#btnFinish').addEventListener('click', () => {
+    markLearned(study.id);
+    const due = lessons[study.id] && lessons[study.id].due;
+    if (window.OCFish) {
+      window.OCFish.say('这一课记下了，' + (due ? '下次复习 ' + due : '已完成全部复习') + '。', 'combo');
+    }
+    closeStudy();
+  });
+  $('#btnFinishSkip').addEventListener('click', closeStudy);
+
+  $('#dueList').addEventListener('click', e => {
+    const b = e.target.closest('[data-done]');
+    if (!b) return;
+    reviewDone(b.getAttribute('data-done'));
+    renderToday();
+    renderPlan();
+    if (window.OCFish) window.OCFish.correct();
+  });
+
+  $('#btnPick').addEventListener('click', () => {
+    picked = [];
+    renderPick();
+    $('#pickBox').hidden = false;
+    $('#pickBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  $('#btnPickCancel').addEventListener('click', () => {
+    picked = [];
+    $('#pickBox').hidden = true;
+  });
+  $('#pickUnits').addEventListener('click', e => {
+    const b = e.target.closest('[data-lsn]');
+    if (!b || b.disabled) return;
+    const id = b.getAttribute('data-lsn');
+    const i = picked.indexOf(id);
+    if (i >= 0) picked.splice(i, 1); else picked.push(id);
+    renderPick();
+  });
+  $('#btnPickOk').addEventListener('click', () => {
+    if (!picked.length) return;
+    picked.forEach(id => markLearned(id));
+    const n = picked.length;
+    picked = [];
+    $('#pickBox').hidden = true;
+    renderAll();
+    if (window.OCFish) window.OCFish.say('记下 ' + n + ' 课，明天开始按曲线复习。', 'combo');
+  });
+
+  $('#units').addEventListener('click', e => {
+    const b = e.target.closest('[data-lsn]');
+    if (!b || b.disabled) return;
+    const id = b.getAttribute('data-lsn');
+    if (stateOf(id).key === 'empty') return;
+    openStudy(id);
   });
 
   $('#btnBulk').addEventListener('click', () => {
@@ -268,7 +479,8 @@
     if (!lines.length) { $('#bulkHint').textContent = '先粘点内容进来'; return; }
     const r = addWords(lines);
     $('#bulkHint').textContent = '导入 ' + r.added + ' 个' +
-      (r.dup ? '，重复 ' + r.dup : '') + (r.bad ? '，无法识别 ' + r.bad : '');
+      (r.dup ? '，重复 ' + r.dup : '') + (r.bad ? '，无法识别 ' + r.bad : '') +
+      (r.over ? '，超出容量 ' + r.over : '');
     if (r.added) $('#bulk').value = '';
   });
 
@@ -276,7 +488,7 @@
     const en = $('#fEn').value.trim(), zh = $('#fZh').value.trim(), ph = $('#fPh').value.trim();
     if (!en || !zh) { $('#bulkHint').textContent = '英文和中文都要填'; return; }
     const r = addWords([{ en, zh, ph }]);
-    $('#bulkHint').textContent = r.added ? '已添加' : '这个词已经在词库里了';
+    $('#bulkHint').textContent = r.added ? '已添加' : (r.over ? '48 课都满了' : '这个词已经在词库里了');
     if (r.added) { $('#fEn').value = ''; $('#fZh').value = ''; $('#fPh').value = ''; }
   });
 
@@ -285,14 +497,13 @@
     if (!b) return;
     const id = b.getAttribute('data-del');
     words = words.filter(w => w.id !== id);
-    persistNow();
-    renderBank();
-    buildQueue();
-    renderCard();
+    saveAllNow();
+    renderAll();
   });
 
   $('#btnExport').addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(words, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ words: words, lessons: lessons, cfg: { perLesson: perLesson } }, null, 2)],
+      { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'vocab-' + today() + '.json';
@@ -301,18 +512,24 @@
   });
 
   $('#btnClear').addEventListener('click', () => {
-    if (!words.length) return;
-    if (!confirm('清空词库？' + words.length + ' 个单词和复习进度都会删除，不能撤销。')) return;
-    words = [];
-    persistNow();
-    renderBank();
-    buildQueue();
-    renderCard();
+    if (!words.length && !Object.keys(lessons).length) return;
+    if (!confirm('清空词库和全部复习记录？不能撤销。')) return;
+    words = []; lessons = {};
+    saveAllNow();
+    renderAll();
+  });
+
+  $('#fPer').value = String(perLesson);
+  $('#fPer').addEventListener('change', e => {
+    const v = Number(e.target.value);
+    if (!confirm('改成每课 ' + v + ' 词？已分好课的单词不重排，只影响之后新加的。')) {
+      e.target.value = String(perLesson); return;
+    }
+    cfg.perLesson = v;
+    localStorage.setItem(K_C, JSON.stringify(cfg));
+    location.reload();
   });
 
   /* ---------- 启动 ---------- */
-  renderBank();
-  buildQueue();
-  if (queue.length) renderCard();
-  else showDone();
+  renderAll();
 })();

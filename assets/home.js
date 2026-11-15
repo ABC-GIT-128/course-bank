@@ -194,9 +194,9 @@
   function vocabCard() {
     return '<a class="ccard ccard-vocab" href="vocab.html">' +
       '<div class="cchd"><h3>英语四级 · 背单词</h3><span class="term">词库自建</span></div>' +
-      '<p class="ccsub">自己粘单词，按艾宾浩斯曲线安排每天复习：认识 / 模糊 / 不认识三种反馈。</p>' +
-      '<p class="ccmeta">本地存储 · 每日 10 个新词 · 免登录</p>' +
-      '<p class="cctypes">翻卡 · 自动排期 · 错词高频重现</p>' +
+      '<p class="ccsub">12 单元 × 4 课，自己粘单词自动分课；背完勾一下，按遗忘曲线在第 1/3/7/14/29 天提醒复习。</p>' +
+      '<p class="ccmeta">本地存储 · 48 课 · 免登录</p>' +
+      '<p class="cctypes">翻卡学习 · 按课复习 · 逾期标红</p>' +
       '<div class="ccfoot"><span class="go">开始背 →</span></div>' +
       '</a>';
   }

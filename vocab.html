@@ -19,25 +19,69 @@
     </div>
     <div class="row2">
       <div class="track"><i id="bar"></i></div>
-      <div class="stat" id="stat">今天还没开始</div>
+      <div class="stat" id="stat">—</div>
     </div>
   </div>
 </header>
 
 <main class="wrap vwrap">
 
-  <!-- 复习卡片 -->
-  <section id="study">
+  <!-- ============ 今日 ============ -->
+  <section class="vtoday">
+    <div class="vthead">
+      <h2>今天</h2>
+      <span class="muted" id="todayTip"></span>
+    </div>
+
+    <div id="dueBox">
+      <h3 class="vsub">按遗忘曲线要复习 <b id="dueCount">0</b> 课</h3>
+      <ul class="duelist" id="dueList"></ul>
+      <p class="muted vempty" id="dueEmpty" hidden>今天没有到期复习，可以学新课。</p>
+    </div>
+
+    <div class="vnewbox">
+      <div class="vnewline">
+        <span>下一课：<b id="nextLesson">—</b></span>
+        <button class="btn primary" id="btnLearn">开始学这一课</button>
+      </div>
+      <div class="vnewline">
+        <span class="muted">已经自己背过了？</span>
+        <button class="btn plain" id="btnPick">勾选今天学过的课</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 勾选面板 ============ -->
+  <section class="vpanel2" id="pickBox" hidden>
+    <div class="vpanel2-hd">
+      <b>今天背了哪几课？</b>
+      <span class="muted">点方块多选，确认后按遗忘曲线排复习</span>
+    </div>
+    <div class="units" id="pickUnits"></div>
+    <div class="vrow">
+      <button class="btn primary" id="btnPickOk">确认（<span id="pickN">0</span> 课）</button>
+      <button class="btn plain" id="btnPickCancel">取消</button>
+    </div>
+  </section>
+
+  <!-- ============ 学单词（卡片） ============ -->
+  <section id="study" hidden>
+    <div class="vstudy-hd">
+      <b id="studyTitle">—</b>
+      <span class="muted" id="studyProgress"></span>
+      <button class="btn plain" id="btnStudyExit">退出</button>
+    </div>
+
     <div class="vcard" id="vcard">
       <div class="vinner">
         <div class="vface vfront">
-          <div class="vtag" id="vtag">新词</div>
+          <div class="vtag" id="vtag">单词</div>
           <div class="ven" id="ven">—</div>
           <div class="vph" id="vph"></div>
           <div class="vhint">点一下卡片看释义</div>
         </div>
         <div class="vface vback">
-          <div class="vtag" id="vtag2">释义</div>
+          <div class="vtag">释义</div>
           <div class="vzh" id="vzh">—</div>
           <div class="vmeta" id="vmeta"></div>
         </div>
@@ -45,26 +89,39 @@
     </div>
 
     <div class="vbtns" id="vbtns" hidden>
-      <button class="vbtn bad" data-k="no">不认识<small>明天再来</small></button>
-      <button class="vbtn mid" data-k="fuzzy">模糊<small>保持进度</small></button>
-      <button class="vbtn ok" data-k="yes">认识<small>间隔拉长</small></button>
-    </div>
-
-    <div class="vnext" id="vnext" hidden>
-      <button class="btn" id="btnNext">下一张 <span>→</span></button>
+      <button class="vbtn bad" data-k="no">不认识<small>记一笔</small></button>
+      <button class="vbtn mid" data-k="fuzzy">模糊<small>过一遍</small></button>
+      <button class="vbtn ok" data-k="yes">认识<small>下一个</small></button>
     </div>
 
     <div class="vdone" id="vdone" hidden>
-      <div class="vdone-emoji">🎉</div>
-      <h2>今天的单词过完了</h2>
+      <div class="vdone-emoji">✅</div>
+      <h3 id="vdoneTitle">这一课过完了</h3>
       <p class="muted" id="vdoneText"></p>
-      <button class="btn" id="btnAgain">再刷一轮待复习</button>
+      <button class="btn primary" id="btnFinish">记下今天学过，排复习</button>
+      <button class="btn plain" id="btnFinishSkip">先不记</button>
     </div>
   </section>
 
-  <!-- 添加单词 -->
+  <!-- ============ 课程表 ============ -->
+  <section class="vplan">
+    <div class="vthead">
+      <h2>课程表</h2>
+      <span class="muted">12 单元 × 4 课 · 共 48 课</span>
+    </div>
+    <div class="legend">
+      <i class="lg lg-new"></i>未学
+      <i class="lg lg-due"></i>待复习
+      <i class="lg lg-done"></i>已完成
+      <i class="lg lg-wait"></i>本轮已复习
+      <i class="lg lg-empty"></i>没有单词
+    </div>
+    <div class="units" id="units"></div>
+  </section>
+
+  <!-- ============ 添加单词 ============ -->
   <details class="vpanel" id="panel">
-    <summary>添加单词 <span class="muted">（支持一次粘贴多行）</span></summary>
+    <summary>添加单词 <span class="muted">（按顺序自动分到 48 课里）</span></summary>
     <div class="vpanel-body">
       <label class="vlabel">批量粘贴，每行一个：<code>apple 苹果</code> 或 <code>apple,苹果</code> 或 <code>apple /ˈæpl/ 苹果</code></label>
       <textarea id="bulk" rows="6" placeholder="abandon 放弃&#10;ability /əˈbɪləti/ 能力&#10;absorb,吸收"></textarea>
@@ -82,17 +139,28 @@
         <input id="fPh" placeholder="音标（可选）" autocomplete="off">
         <button class="btn" id="btnOne">添加</button>
       </div>
+
+      <div class="vrow">
+        <span class="muted">每课单词数</span>
+        <select id="fPer" class="srcsel">
+          <option value="20">20</option>
+          <option value="25" selected>25</option>
+          <option value="30">30</option>
+          <option value="50">50</option>
+        </select>
+        <span class="muted" id="capTip"></span>
+      </div>
     </div>
   </details>
 
-  <!-- 词库 -->
-  <details class="vpanel" id="bank">
+  <!-- ============ 词库 ============ -->
+  <details class="vpanel">
     <summary>我的词库 <span class="muted" id="bankCount">0 词</span></summary>
     <div class="vpanel-body">
       <div class="vrow">
         <button class="btn plain" id="btnExport">导出 JSON</button>
         <button class="btn plain" id="btnClear">清空词库</button>
-        <span class="muted">所有数据只存在你自己的浏览器里</span>
+        <span class="muted">数据只存在你的浏览器里</span>
       </div>
       <ul class="vwords" id="vwords"></ul>
     </div>
