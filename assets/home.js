@@ -166,7 +166,7 @@
 
     const act = items.filter(c => c.status === 'active');
     const arc = items.filter(c => c.status === 'archived');
-    let html = '<div class="grid">' + act.map(card).join('') + contribCard() + '</div>';
+    let html = '<div class="grid">' + act.map(card).join('') + vocabCard() + contribCard() + '</div>';
     if (arc.length) {
       html += '<div class="arcbar"><b>往期课程（' + arc.length + ' 门）</b>' +
         '<span>超过' + RET.keepYears + ' 年（' + RET.cutoff + ' 年之前）的课程已归档，仅作参考，可能与本学期考纲不一致</span>' +
@@ -189,6 +189,16 @@
       act.reduce((s, c) => s + c.count, 0) + ' 题' +
       (arc.length ? ' · 归档 ' + arc.length + ' 门' : '') +
       ' · 内容保留最近 ' + RET.keepYears + ' 年';
+  }
+
+  function vocabCard() {
+    return '<a class="ccard ccard-vocab" href="vocab.html">' +
+      '<div class="cchd"><h3>英语四级 · 背单词</h3><span class="term">词库自建</span></div>' +
+      '<p class="ccsub">自己粘单词，按艾宾浩斯曲线安排每天复习：认识 / 模糊 / 不认识三种反馈。</p>' +
+      '<p class="ccmeta">本地存储 · 每日 10 个新词 · 免登录</p>' +
+      '<p class="cctypes">翻卡 · 自动排期 · 错词高频重现</p>' +
+      '<div class="ccfoot"><span class="go">开始背 →</span></div>' +
+      '</a>';
   }
 
   function contribCard() {

@@ -6,7 +6,7 @@
  *
  * 改版本号即可让所有客户端下次访问时换新缓存。
  */
-const VERSION = 'oc-v2';
+const VERSION = 'oc-v3';
 const CACHE = VERSION;
 
 /* 首屏必需文件：装好之后离线也能进站 */
@@ -14,11 +14,16 @@ const SHELL = [
   './',
   './index.html',
   './quiz.html',
+  './vocab.html',
   './about.html',
   './manifest.webmanifest',
   './assets/app.css',
   './assets/home.js',
   './assets/quiz.js',
+  './assets/fish.js',
+  './assets/vocab.js',
+  './assets/qtypes.js',
+  './assets/img/fish.png',
   './assets/pwa.js',
   './assets/icon-192.png',
   './assets/icon-512.png',

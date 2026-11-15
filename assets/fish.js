@@ -59,7 +59,7 @@
     '</div>' +
     '<button class="fishbody" id="fishbody" type="button" aria-label="大肥鱼">' +
       '<span class="fzzz">Z</span><span class="fzzz fz2">z</span><span class="fzzz fz3">z</span>' +
-      '<span class="femoji" aria-hidden="true">🐟</span>' +
+      '<img class="femoji" src="assets/img/fish.png" alt="" aria-hidden="true">' +
     '</button>';
   document.body.appendChild(wrap);
 

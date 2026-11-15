@@ -424,7 +424,8 @@ body{padding-bottom:64px}
   transition:transform .18s}
 .fishbody:hover{transform:translateY(-2px)}
 .fishbody:focus-visible{outline:2px solid #c7cdfa;outline-offset:2px}
-.femoji{display:block;transform-origin:50% 70%}
+.femoji{display:block;width:42px;height:42px;border-radius:50%;object-fit:cover;
+  transform-origin:50% 70%;pointer-events:none;user-select:none}
 
 /* 气泡 */
 .fishbubble{pointer-events:none;position:relative;max-width:232px;padding:9px 12px;border-radius:12px;
@@ -507,3 +508,78 @@ body{padding-bottom:64px}
   .quietbtn{padding:4px 8px;font-size:11.5px}
   .topin{flex-wrap:wrap;row-gap:6px}
 }
+
+/* ================= 背单词 ================= */
+.vwrap{max-width:640px;margin:0 auto;padding:0 14px 30px}
+#study{display:block}
+.vcard{perspective:1200px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.vinner{position:relative;height:236px;transform-style:preserve-3d;transition:transform .5s cubic-bezier(.2,.7,.3,1)}
+.vcard.flipped .vinner{transform:rotateY(180deg)}
+.vface{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:22px;text-align:center}
+.vback{transform:rotateY(180deg);background:linear-gradient(180deg,#fbfbff,#fff)}
+.vtag{position:absolute;top:14px;left:16px;font-size:11px;color:#6b7280;background:#eef0f6;
+  padding:2px 8px;border-radius:99px}
+.ven{font-size:36px;font-weight:700;letter-spacing:.4px;color:#1b2130;word-break:break-word;line-height:1.3}
+.vph{margin-top:8px;font-size:14px;color:#8a93a6}
+.vhint{position:absolute;bottom:14px;font-size:11.5px;color:#b0b7c6}
+.vzh{font-size:22px;font-weight:600;color:#1b2130;line-height:1.55;word-break:break-word;max-height:120px;overflow:auto}
+.vmeta{margin-top:12px;font-size:11.5px;color:#9aa3b2}
+
+.vbtns{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.vbtns[hidden]{display:none}
+.vbtn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:11px 8px;border-radius:12px;
+  border:1px solid var(--line);background:#fff;font-family:inherit;font-size:14px;font-weight:600;
+  color:#39405a;cursor:pointer;transition:.16s}
+.vbtn small{font-size:10.5px;font-weight:400;color:#9aa3b2}
+.vbtn:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(70,80,120,.12)}
+.vbtn.bad{border-color:#f3cccc;color:#a33;background:#fdf5f5}
+.vbtn.bad small{color:#c98d8d}
+.vbtn.mid{border-color:#e3e6ef;color:#4b5563}
+.vbtn.ok{border-color:#c6ead4;color:#166534;background:#f4fbf6}
+.vbtn.ok small{color:#7aa88b}
+
+.vnext{margin-top:12px;text-align:center}
+.vdone{text-align:center;padding:34px 10px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+.vdone-emoji{font-size:34px}
+.vdone h2{font-size:17px;margin:8px 0 6px}
+
+.vpanel{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.vpanel>summary{cursor:pointer;padding:12px 14px;font-size:13.5px;font-weight:600;color:#39405a;list-style:none}
+.vpanel>summary::-webkit-details-marker{display:none}
+.vpanel>summary::before{content:'＋';display:inline-block;width:16px;color:#8a93a6}
+.vpanel[open]>summary::before{content:'－'}
+.vpanel-body{padding:0 14px 14px}
+.vlabel{display:block;font-size:12px;color:#6b7280;line-height:1.8;margin:2px 0 6px}
+.vlabel code{background:#eef0f6;padding:1px 5px;border-radius:5px;font-size:11.5px}
+.vpanel textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;
+  padding:10px 12px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.7;
+  resize:vertical;color:#2b3142;background:#fcfcfe}
+.vpanel textarea:focus,.vform input:focus{outline:2px solid #dfe3fb;border-color:#c7cdfa}
+.vrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.vrow .muted{font-size:11.5px}
+.vhr{border:0;border-top:1px solid var(--line);margin:16px 0 12px}
+.vform{display:grid;grid-template-columns:1.2fr 1.6fr 1fr auto;gap:8px}
+.vform input{border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;font-family:inherit;color:#2b3142;background:#fcfcfe}
+.vwords{list-style:none;margin:12px 0 0;padding:0;max-height:300px;overflow:auto}
+.vwords li{display:flex;gap:8px;align-items:baseline;padding:7px 2px;border-bottom:1px dashed #eef0f5;font-size:13px}
+.vwords b{color:#1b2130;min-width:90px}
+.vwords .vz{color:#5b6472;flex:1;min-width:0;word-break:break-word}
+.vwords .vbox{font-style:normal;font-size:10.5px;color:#7c869a;background:#eef0f6;padding:1px 6px;border-radius:5px}
+.vwords .vbox.new{background:#eaf3ff;color:#3567aa}
+.vdel{margin-left:4px;border:0;background:transparent;color:#c3c9d6;font-size:16px;line-height:1;cursor:pointer;padding:0 4px}
+.vdel:hover{color:#d9534f}
+@media(max-width:600px){
+  .vinner{height:210px}
+  .ven{font-size:30px}
+  .vzh{font-size:19px}
+  .vform{grid-template-columns:1fr 1fr}
+  .vbtns{gap:8px}
+  .vbtn{font-size:13px;padding:10px 6px}
+}
+
+/* 首页的背单词入口卡 */
+.ccard-vocab{border-color:#d9def7;background:linear-gradient(160deg,#fbfbff,#f2f4ff)}
+.ccard-vocab h3{color:#2f3676}
+.ccard-vocab .go{color:#4338ca}
