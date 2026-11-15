@@ -21,7 +21,7 @@
   <div class="hdin">
     <div class="row1">
       <div class="ttl"><a class="back" href="index.html">← 全部课程</a><b id="cname">加载中…</b><span id="cterm" class="cterm"></span></div>
-      <div class="tools">
+      <div class="tools" data-fish="toggle-slot">
         <button class="btn" id="btnShuffle">随机</button>
         <button class="btn" id="btnWrong">错题 <b id="wrongN">0</b></button>
         <button class="btn plain" id="btnReset">重置</button>
@@ -44,6 +44,7 @@
 <script src="assets/qtypes.js"></script>
 <script src="data/_status.js"></script>
 <script src="data/courses.js"></script>
+<script src="assets/fish.js"></script>
 <script>
 (function(){
   var id = window.OC_COURSE_ID || new URLSearchParams(location.search).get('course') || 'sensor';

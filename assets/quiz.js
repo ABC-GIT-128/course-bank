@@ -60,11 +60,25 @@ const norm = s => String(s == null ? '' : s)
   .replace(/[－—–−]/g,'-').replace(/×/g,'*').replace(/÷/g,'/')
   .replace(/[“”"'‘’]/g,'').toLowerCase();
 
-function save(){
+function saveNow(){
   try{ localStorage.setItem(LS, JSON.stringify({
     rec:state.rec, mode:state.mode, shuffled:state.shuffled, seed:state.seed,
     kind:state.kind, doc:state.doc, year:state.year, y:Math.round(window.scrollY)
   })); }catch(e){}
+}
+
+/* 答题 / 滚动 / 切筛选都会触发保存：合并成一次写盘，避免频繁 JSON.stringify + 同步 IO 卡顿。
+ * 关页面、切到后台时立刻补一次，保证不丢进度。 */
+let saveTimer = null;
+let saveDirty = false;
+function save(){
+  saveDirty = true;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { saveTimer = null; saveDirty = false; saveNow(); }, 260);
+}
+function saveFlush(){
+  if(saveTimer){ clearTimeout(saveTimer); saveTimer = null; }
+  if(saveDirty || !saveTimer){ saveDirty = false; saveNow(); }
 }
 function load(){
   let d = {};
@@ -555,6 +569,8 @@ function submit(ev, q, payload){
   } else {
     toast(true, '回答正确');
   }
+  /* 大肥鱼：答对连击升级、答错颤抖 */
+  if(window.OCFish){ ok ? OCFish.correct() : OCFish.wrong(); }
 }
 
 function replaceCard(q, ev){
@@ -608,6 +624,7 @@ $('#list').addEventListener('click', e => {
     delete state.wrongSet[q.id];
     state.open[q.id] = true;
     save(); replaceCard(q, e); renderChips(); refreshStats();
+    if(window.OCFish) OCFish.selfMark(true);
     toast(true, '已记为答对');
     return;
   }
@@ -617,6 +634,7 @@ $('#list').addEventListener('click', e => {
     state.wrongSet[q.id] = 1;
     state.open[q.id] = true;
     save(); replaceCard(q, e); renderChips(); refreshStats();
+    if(window.OCFish) OCFish.selfMark(false);
     toast(false, '已记为答错，加入错题本');
     return;
   }
@@ -730,7 +748,8 @@ window.addEventListener('scroll', () => {
   const cards = document.querySelectorAll('.card');
   $('#fab').classList.toggle('hide', !cards.length);
 }, {passive:true});
-window.addEventListener('beforeunload', save);
+window.addEventListener('beforeunload', saveFlush);
+document.addEventListener('visibilitychange', () => { if(document.hidden) saveFlush(); });
 window.addEventListener('resize', () => refreshStats());
 
 /* ---------- 课程资料（原文件下载） ---------- */

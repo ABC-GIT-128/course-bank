@@ -7,6 +7,41 @@
   const esc = s => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+  /* ---------- 置顶（最多 3 门） ---------- */
+  const PINS_KEY = 'oc_pins';
+  const MAX_PINS = 3;
+  const debounce = (window.OCFish && window.OCFish.debounce)
+    ? window.OCFish.debounce
+    : function (fn, wait) { let t; return function () { const a = arguments, c = this; clearTimeout(t); t = setTimeout(() => fn.apply(c, a), wait); }; };
+
+  function readPins() {
+    try {
+      const v = JSON.parse(localStorage.getItem(PINS_KEY) || '[]');
+      return Array.isArray(v) ? v.filter(id => typeof id === 'string').slice(0, MAX_PINS) : [];
+    } catch (e) { return []; }
+  }
+  let PINS = readPins();
+  /* 写盘防抖：连续点图钉时只落一次 */
+  const persistPins = debounce(() => {
+    try { localStorage.setItem(PINS_KEY, JSON.stringify(PINS)); } catch (e) {}
+  }, 250);
+
+  let hintTimer = null;
+  function flash(msg) {
+    const head = document.querySelector('.listhead');
+    if (!head) return;
+    let el = document.getElementById('pinhint');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'pinhint';
+      el.className = 'pinhint';
+      head.parentNode.insertBefore(el, head.nextSibling);
+    }
+    el.textContent = msg;
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => { if (el) el.textContent = ''; }, 3200);
+  }
+
   /* ---------- 搜索索引 ---------- */
   function courseText(c) {
     const chNames = c.chapters.map(n => '第' + n + '章 ' + (c.chapterNames[n] || '')).join(' ');
@@ -47,6 +82,7 @@
   }
 
   function card(c) {
+    const pinned = PINS.indexOf(c.id) >= 0;
     const terms = c.terms.map(t => '<span class="term">' + esc(c.termLabels[t] || t) + '</span>').join('') +
       (c.status === 'archived' ? '<span class="term pill-arc">归档</span>' : '');
     const hid = c.hidden ? '<i class="hiddennote">' + c.hidden + ' 题已下架</i>' : '';
@@ -54,7 +90,10 @@
       .filter(k => c.tags[k])
       .map(k => ({ choice: '选择', fill: '填空', term: '名词解释', calc: '计算' }[k] + ' ' + c.tags[k]))
       .join(' · ');
-    return '<a class="ccard' + (c.status === 'archived' ? ' is-arc' : '') + '" href="' + encodeURIComponent(c.id) + '/">' +
+    return '<div class="cwrap' + (pinned ? ' is-pinned' : '') + '" data-cid="' + esc(c.id) + '">' +
+      '<button class="pinbtn' + (pinned ? ' on' : '') + '" type="button" data-pin="' + esc(c.id) + '"' +
+        ' aria-pressed="' + pinned + '" title="' + (pinned ? '取消置顶' : '置顶这门课') + '">📌</button>' +
+      '<a class="ccard' + (c.status === 'archived' ? ' is-arc' : '') + '" href="' + encodeURIComponent(c.id) + '/">' +
       '<div class="cchd"><h3>' + esc(c.title) + '</h3>' + terms + '</div>' +
       '<p class="ccsub">' + esc(c.subtitle || '') + '</p>' +
       '<p class="ccmeta">' + esc(c.college) + ' · ' +
@@ -63,7 +102,7 @@
         ' · 更新 ' + esc(c.updatedAt) + '</p>' +
       '<p class="cctypes">' + esc(typeLine) + (hid ? ' · ' + hid : '') + '</p>' +
       '<div class="ccfoot">' + tagOf(c) + '<span class="go">' + (c.status === 'archived' ? '查看归档 →' : '开始练习 →') + '</span></div>' +
-      '</a>';
+      '</a></div>';
   }
 
   /* ---------- 渲染 ---------- */
@@ -72,7 +111,34 @@
   const titleEl = $('#listtitle');
   const metaEl = $('#listmeta');
 
+  let VIEW = { list: INDEX, q: '' };
+
+  /* 重排时用 FLIP：先量旧位置，重绘后从旧位置平滑滑到新位置 */
+  function paint(html) {
+    const before = {};
+    cardsEl.querySelectorAll('[data-cid]').forEach(el => {
+      before[el.getAttribute('data-cid')] = el.getBoundingClientRect();
+    });
+    cardsEl.innerHTML = html;
+    if (!Object.keys(before).length) return;
+    cardsEl.querySelectorAll('[data-cid]').forEach(el => {
+      const b = before[el.getAttribute('data-cid')];
+      if (!b) return;
+      const a = el.getBoundingClientRect();
+      const dx = b.left - a.left, dy = b.top - a.top;
+      if (!dx && !dy) return;
+      el.style.transition = 'none';
+      el.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      requestAnimationFrame(() => {
+        el.style.transition = 'transform .38s cubic-bezier(.2,.7,.3,1)';
+        el.style.transform = '';
+        setTimeout(() => { el.style.transition = ''; }, 420);
+      });
+    });
+  }
+
   function render(list, q) {
+    VIEW = { list: list, q: q || '' };
     const items = list.map(x => x.c || x).filter(c => c.status !== 'hidden');
     if (!items.length) {
       cardsEl.innerHTML = '';
@@ -85,11 +151,17 @@
 
     if (q) {
       /* 搜索：在架 + 归档一起显示，归档带角标 */
-      cardsEl.innerHTML = '<div class="grid">' + items.map(card).join('') + '</div>';
+      paint('<div class="grid">' + items.map(card).join('') + '</div>');
       titleEl.textContent = '搜索结果';
       metaEl.textContent = '共 ' + items.length + ' 门 · ' +
         items.reduce((s, c) => s + c.count, 0) + ' 题，关键词「' + q + '」';
       return;
+    }
+
+    /* 置顶优先；搜索时保持相关度排序 */
+    if (!q) {
+      const rank = c => { const i = PINS.indexOf(c.id); return i < 0 ? 999 : i; };
+      items.sort((a, b) => rank(a) - rank(b));
     }
 
     const act = items.filter(c => c.status === 'active');
@@ -101,7 +173,7 @@
         '<button id="arctoggle">展开查看</button></div>' +
         '<div class="arcwrap" id="arcwrap" hidden><div class="grid">' + arc.map(card).join('') + '</div></div>';
     }
-    cardsEl.innerHTML = html;
+    paint(html);
 
     const btn = document.getElementById('arctoggle');
     const wrap = document.getElementById('arcwrap');
@@ -151,6 +223,34 @@
     $('#q').value = b.textContent;
     search(b.textContent);
     $('#q').focus();
+  });
+
+  /* ---------- 置顶交互 ---------- */
+  function togglePin(id) {
+    const i = PINS.indexOf(id);
+    if (i >= 0) {
+      PINS.splice(i, 1);
+      flash('已取消置顶');
+    } else {
+      if (PINS.length >= MAX_PINS) {
+        /* 满了：肥鱼跳出来劝阻，同时在列表上方留一句提示 */
+        if (window.OCFish) window.OCFish.pinFull();
+        flash('最多置顶 ' + MAX_PINS + ' 门课程，先取消一个吧');
+        return;
+      }
+      PINS.push(id);
+      flash('已置顶（' + PINS.length + '/' + MAX_PINS + '）');
+    }
+    persistPins();
+    render(VIEW.list, VIEW.q);
+  }
+
+  cardsEl.addEventListener('click', function (e) {
+    const btn = e.target.closest('[data-pin]');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    togglePin(btn.getAttribute('data-pin'));
   });
 
   /* ---------- 事件 ---------- */

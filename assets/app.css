@@ -397,3 +397,112 @@ body.home main.wrap{flex:1}
 }
 /* 空题库提示 */
 .empty{padding:38px 16px;text-align:center;color:#6b7280;line-height:2}
+
+/* ================= 课程置顶 ================= */
+.cwrap{position:relative;min-width:0}
+.cwrap.is-pinned .ccard{border-color:#c7cdfa;box-shadow:0 10px 26px rgba(79,70,229,.14)}
+.cwrap.is-pinned .ccard::after{content:'';position:absolute;inset:0;border-radius:16px;pointer-events:none;
+  box-shadow:inset 0 0 0 1px rgba(199,205,250,.9)}
+.pinbtn{position:absolute;top:12px;right:12px;z-index:3;width:28px;height:28px;padding:0;
+  display:inline-flex;align-items:center;justify-content:center;font-size:13px;line-height:1;cursor:pointer;
+  border:1px solid var(--line);border-radius:9px;background:#fff;color:#a8afbf;transition:.16s}
+.pinbtn:hover{color:#4338ca;border-color:#c7cdfa;background:#eef2ff}
+.pinbtn.on{color:#4338ca;border-color:#c7cdfa;background:#eef2ff}
+.cwrap .cchd{padding-right:26px}
+.pinhint{font-size:12px;color:#8a93a6;margin:-4px 0 10px}
+@media(max-width:600px){ .pinbtn{width:32px;height:32px;font-size:14px} }
+
+/* ================= 大肥鱼 ================= */
+body{padding-bottom:64px}
+.fishwrap{position:fixed;left:14px;bottom:14px;z-index:60;display:flex;flex-direction:column;align-items:flex-start;
+  gap:6px;pointer-events:none;max-width:calc(100vw - 32px)}
+.fishwrap[hidden]{display:none}
+.fishbody{pointer-events:auto;position:relative;width:48px;height:48px;padding:0;border:0;cursor:pointer;
+  font-size:28px;line-height:1;display:flex;align-items:center;justify-content:center;border-radius:50%;
+  background:radial-gradient(circle at 50% 58%,rgba(255,255,255,.96),rgba(255,255,255,.62));
+  box-shadow:0 6px 16px rgba(70,80,120,.16),inset 0 0 0 1px rgba(199,205,250,.55);
+  transition:transform .18s}
+.fishbody:hover{transform:translateY(-2px)}
+.fishbody:focus-visible{outline:2px solid #c7cdfa;outline-offset:2px}
+.femoji{display:block;transform-origin:50% 70%}
+
+/* 气泡 */
+.fishbubble{pointer-events:none;position:relative;max-width:232px;padding:9px 12px;border-radius:12px;
+  background:#fff;border:1px solid var(--line);box-shadow:0 10px 26px rgba(70,80,120,.14);
+  font-size:12.5px;line-height:1.65;color:#39405a;opacity:0;transform:translateY(6px) scale(.96);
+  transition:opacity .18s,transform .18s}
+.fishbubble.show{opacity:1;transform:none}
+.fishbubble::after{content:'';position:absolute;left:18px;bottom:-6px;width:10px;height:10px;background:#fff;
+  border-right:1px solid var(--line);border-bottom:1px solid var(--line);transform:rotate(45deg)}
+.ftext{display:block}
+.fhearts{position:absolute;right:6px;top:-14px;font-size:12px;line-height:1;letter-spacing:1px;opacity:0}
+.fishbubble.m-combo .fhearts,.fishbubble.m-super .fhearts{content:'♥';opacity:1;color:#e0526e;
+  animation:heartsUp 1.4s ease-in-out infinite}
+.fishbubble.m-combo .fhearts::before{content:'♥ ♥'}
+.fishbubble.m-super .fhearts::before{content:'♥ ♥ ♥ ♥'}
+.fishbubble.m-angry .fhearts{opacity:1;color:#5b6472;font-weight:700;font-size:15px;letter-spacing:2px;top:-15px;right:10px}
+.fishbubble.m-angry .fhearts::before{content:'〰〰〰'}
+
+/* 睡觉的 Zzz */
+.fzzz{position:absolute;top:2px;right:2px;font-size:11px;font-weight:700;color:#8a93a6;opacity:0;pointer-events:none}
+.fz2{right:10px;top:-4px;font-size:9px}
+.fz3{right:16px;top:-11px;font-size:8px}
+
+/* 动效关键帧 */
+@keyframes fishShake{
+  0%,100%{transform:translateX(0) rotate(0)}
+  15%{transform:translateX(-4px) rotate(-7deg)}
+  30%{transform:translateX(4px) rotate(7deg)}
+  45%{transform:translateX(-3px) rotate(-5deg)}
+  60%{transform:translateX(3px) rotate(5deg)}
+  80%{transform:translateX(-1px) rotate(-2deg)}
+}
+.fish-shake .femoji{animation:fishShake .62s ease-in-out}
+.fish-shake{animation:fishShake .62s ease-in-out}
+
+@keyframes fishJump{
+  0%,100%{transform:translateY(0) scale(1)}
+  25%{transform:translateY(-12px) scale(1.06)}
+  45%{transform:translateY(0) scale(.98)}
+  65%{transform:translateY(-7px) scale(1.04)}
+  85%{transform:translateY(0) scale(1)}
+}
+.fish-jump .femoji{animation:fishJump .52s ease-in-out 3}
+
+@keyframes heartsUp{
+  0%,100%{opacity:1;transform:translateY(0) scale(1)}
+  50%{opacity:.92;transform:translateY(-7px) scale(1.08)}
+}
+
+@keyframes zzzFloat{
+  0%{opacity:0;transform:translate(0,4px) rotate(-6deg)}
+  30%{opacity:.95}
+  100%{opacity:0;transform:translate(10px,-14px) rotate(6deg)}
+}
+.fish-sleep .femoji{filter:grayscale(.55);opacity:.8;animation:fishBreath 2.6s ease-in-out infinite}
+.fish-sleep .fzzz{animation:zzzFloat 2.6s ease-in-out infinite}
+.fish-sleep .fz2{animation-delay:.5s}
+.fish-sleep .fz3{animation-delay:1s}
+@keyframes fishBreath{
+  0%,100%{transform:translateY(0) rotate(0)}
+  50%{transform:translateY(2px) rotate(-3deg)}
+}
+
+/* 安静模式开关 */
+.quietbtn{font-size:12px;padding:4px 10px;white-space:nowrap}
+.quietbtn[aria-pressed="true"]{background:#eef2ff;border-color:#c7cdfa;color:#3730a3}
+.quietbtn-fixed{position:fixed;top:12px;right:12px;z-index:70;background:#fff}
+@media(max-width:600px){
+  .fishwrap{left:10px;bottom:10px}
+  .fishbody{width:50px;height:50px;font-size:30px}
+  .fishbubble{max-width:200px;font-size:12px}
+}
+
+/* 窄屏：标题可省略，工具栏不因多一个「安静模式」而撑破页面 */
+@media(max-width:600px){
+  .row1{flex-wrap:wrap;row-gap:8px}
+  .ttl{min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis}
+  .tools{flex:0 0 auto;margin-left:auto;max-width:100%}
+  .quietbtn{padding:4px 8px;font-size:11.5px}
+  .topin{flex-wrap:wrap;row-gap:6px}
+}
