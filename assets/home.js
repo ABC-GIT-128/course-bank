@@ -193,10 +193,10 @@
 
   function vocabCard() {
     return '<a class="ccard ccard-vocab" href="vocab.html">' +
-      '<div class="cchd"><h3>英语四级 · 背单词</h3><span class="term">词库自建</span></div>' +
-      '<p class="ccsub">12 单元 × 4 课，自己粘单词自动分课；背完勾一下，按遗忘曲线在第 1/3/7/14/29 天提醒复习。</p>' +
+      '<div class="cchd"><h3>英语四级 · 背单词</h3><span class="term">内置 3863 词</span></div>' +
+      '<p class="ccsub">12 单元 × 4 课，按遗忘曲线在第 1/3/7/14/29 天提醒复习；到点抽考一批，答错的词当批重考。</p>' +
       '<p class="ccmeta">本地存储 · 48 课 · 免登录</p>' +
-      '<p class="cctypes">翻卡学习 · 按课复习 · 逾期标红</p>' +
+      '<p class="cctypes">翻卡学习 · 曲线抽考 · 错词重考</p>' +
       '<div class="ccfoot"><span class="go">开始背 →</span></div>' +
       '</a>';
   }

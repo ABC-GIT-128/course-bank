@@ -1,9 +1,14 @@
-/* 英语四级 · 背单词（12 单元 × 4 课 + 艾宾浩斯按课复习）
+/* 英语四级 · 背单词（12 单元 × 4 课 + 艾宾浩斯按课排期、按词抽考）
  *
  * 设计要点
  * - 词库自己录；单词按录入顺序自动填进 48 课（每课 N 个，可调）
- * - 复习以「课」为单位：勾一下就算复习完，不逐词排期
+ * - 排期以「课」为单位：一课一个 due，到点整课进「今天」
+ * - 复习是「抽考」：进词卡逐词评认识 / 模糊 / 不认识，一批 BATCH 个。
+ *   本轮没考过的词优先考，答错的词排在最前面并当批重考一次，
+ *   所以几轮下来全课的词都会轮一遍，不用一次背完整课。
  * - 遗忘曲线：学完当天算第 0 天，之后第 1、3、7、14、29 天各复习一次，第 5 次复习完成即「已完成」
+ * - 间隔从「上次复习日」往后推（不是从首次学习日），逾期久了不会连环补点；
+ *   逾期超过 2 倍间隔视为淡忘，这一课退回上一轮
  * - 到期未复习会一直留在「今天」列表里，并标出逾期天数
  */
 (function () {
@@ -15,6 +20,8 @@
   const PER_UNIT = 4;
   const TOTAL = UNITS * PER_UNIT;          /* 48 课 */
   const OFF = [1, 3, 7, 14, 29];           /* 累计天数：+1 / +3 / +7 / +14 / +29 */
+  const GAP = OFF.map((v, i) => (i ? v - OFF[i - 1] : v));   /* 每次复习距上次：1 / 2 / 4 / 7 / 15 */
+  const BATCH = 20;                        /* 一批多少个词 */
 
   const $ = s => document.querySelector(s);
   const esc = s => String(s == null ? '' : s)
@@ -190,7 +197,8 @@
     $('#stat').textContent = '已学 ' + learned + '/' + TOTAL + ' 课 · 今日待复习 ' + due +
       ' · 词库 ' + words.length + ' 词';
     $('#bar').style.width = Math.round(learned / TOTAL * 100) + '%';
-    $('#capTip').textContent = '自建词每课上限 ' + perLesson + ' 个' +
+    $('#capTip').textContent = '自建词每课上限 ' + perLesson + ' 个 · 新课每批 ' + BATCH +
+      ' 词 · 复习每轮抽考约 ' + BATCH + ' 词' +
       (SEED ? (' · 内置《' + (SEED.book || '') + '》' + (SEED.scope || '')) : '');
   }
 
@@ -206,7 +214,7 @@
         '<span class="dname">' + label(id) + '<i class="dround">第 ' + (rec.round + 1) + ' 次复习</i></span>' +
         '<span class="dmeta">' + (st.late > 0 ? '<b class="late">逾期 ' + st.late + ' 天</b>' : '今天到期') +
         ' · 上次 ' + ((rec.hist && rec.hist.length) ? rec.hist[rec.hist.length - 1] : rec.at) + '</span>' +
-        '<button class="btn plain dbtn" data-done="' + id + '">已复习</button>' +
+        '<button class="btn plain dbtn" data-review="' + id + '">开始复习</button>' +
         '</li>';
     }).join('');
 
@@ -267,45 +275,85 @@
   function markLearned(id) {
     const t = today();
     const rec = lessons[id];
-    if (rec && rec.at) return reviewDone(id);      /* 学过就当作复习 */
-    lessons[id] = { at: t, round: 0, due: addDays(t, OFF[0]), hist: [t] };
+    if (rec && rec.at) return '';                  /* 已经排过复习的课不覆盖 */
+    lessons[id] = { at: t, round: 0, due: addDays(t, GAP[0]), lastAt: t, hist: [t] };
     saveLessons();
     return 'learned';
   }
+
+  /* 推进一课的复习轮次：间隔从「上次复习日」往后推 */
   function reviewDone(id) {
     const rec = lessons[id];
     if (!rec || !rec.at) return '';
-    /* 今天已经复习过就不再推进，避免连点把整轮刷完 */
-    const hist = rec.hist || [rec.at];
-    if (hist[hist.length - 1] === today()) return 'same-day';
-    rec.round = (rec.round || 0) + 1;
-    rec.hist = rec.hist || [rec.at];
-    rec.hist.push(today());
+    const t = today();
+    const hist = rec.hist || (rec.hist = [rec.at]);
+    /* 同一天只推进一次，避免连点把整轮刷完 */
+    if (hist[hist.length - 1] === t) return 'same-day';
+
+    const round = rec.round || 0;
+    if (round >= OFF.length) return 'done';
+    const last = rec.lastAt || hist[hist.length - 1] || rec.at;
+    const late = diffDays(last, t);
+    /* 逾期超过 2 倍间隔：这课基本淡忘了，退回上一轮重来 */
+    const back = (late > GAP[round] * 2 && round > 0) ? 1 : 0;
+    rec.round = round - back + 1;
+    rec.lastAt = t;
+
     if (rec.round >= OFF.length) {
       rec.due = '';
-      rec.finishedAt = today();
+      rec.finishedAt = t;
     } else {
-      rec.due = addDays(rec.at, OFF[rec.round]);
+      rec.due = addDays(t, GAP[rec.round]);
     }
+    hist.push(t);
     saveLessons();
-    return 'reviewed';
+    return back ? 'reset' : 'reviewed';
   }
 
-  /* ---------- 学习模式 ---------- */
-  const BATCH = 20;
-  let study = { id: '', words: [], pos: 0, end: 0, flipped: false, stat: { yes: 0, fuzzy: 0, no: 0 } };
+  /* 本轮抽考哪些词：最久没考过的优先，答错的再往前插 */
+  function pickReview(id) {
+    const round = (lessons[id] && lessons[id].round) || 0;
+    const ws = wordsOf(id);
+    if (ws.length <= BATCH) return ws;
+    /* 每轮至少 BATCH 个，并且保证剩下的轮次足够把「还没考过的词」轮完
+       （138 词的课 5 轮 × 20 只能覆盖 100 个，所以要按剩余词数自适应） */
+    const fresh = ws.filter(w => typeof w.rAt !== 'number').length;
+    const left = Math.max(1, OFF.length - round);
+    const size = Math.max(BATCH, Math.min(40, Math.ceil(Math.max(fresh, BATCH) / left)));
+    const eff = w => (w.last === 'no' ? -2 : (typeof w.rAt === 'number' ? w.rAt : -1));
+    return ws.slice().sort((a, b) => {
+      const ea = eff(a), eb = eff(b);
+      if (ea !== eb) return ea - eb;
+      const sa = (a.lapses || 0) * 10 + (a.last === 'no' ? 8 : a.last === 'fuzzy' ? 3 : 0);
+      const sb = (b.lapses || 0) * 10 + (b.last === 'no' ? 8 : b.last === 'fuzzy' ? 3 : 0);
+      return sb - sa;
+    }).slice(0, size);
+  }
 
-  function openStudy(id) {
+  /* ---------- 学习 / 复习模式 ---------- */
+  let study = {
+    id: '', mode: 'learn', round: 0, words: [], pos: 0, end: 0,
+    flipped: false, reiter: {}, stat: { yes: 0, fuzzy: 0, no: 0 }
+  };
+
+  function openStudy(id, mode) {
     const ws = wordsOf(id);
     if (!ws.length) return;
-    study = { id: id, words: ws, pos: 0, end: Math.min(BATCH, ws.length), flipped: false,
-              stat: { yes: 0, fuzzy: 0, no: 0 } };
+    const rec = lessons[id];
+    const isRev = mode === 'review' && !!(rec && rec.at);
+    const list = isRev ? pickReview(id) : ws;
+    study = {
+      id: id, mode: isRev ? 'review' : 'learn', round: (rec && rec.round) || 0,
+      words: list, pos: 0, end: isRev ? list.length : Math.min(BATCH, list.length),
+      flipped: false, reiter: {}, stat: { yes: 0, fuzzy: 0, no: 0 }
+    };
     $('#study').hidden = false;
     $('#vdone').hidden = true;
     $('#vcard').style.display = '';
     $('#vbtns').hidden = true;
-    $('#studyTitle').textContent = label(id) + ' · 共 ' + ws.length + ' 词' +
-      (ws.length > BATCH ? '（每批 ' + BATCH + ' 个）' : '');
+    $('#studyTitle').textContent = isRev
+      ? label(id) + ' · 第 ' + (study.round + 1) + ' 次复习 · 抽考 ' + list.length + ' 词'
+      : label(id) + ' · 共 ' + ws.length + ' 词' + (ws.length > BATCH ? '（每批 ' + BATCH + ' 个）' : '');
     $('#study').scrollIntoView({ behavior: 'smooth', block: 'start' });
     showCard();
   }
@@ -319,17 +367,22 @@
     study.flipped = false;
     $('#vcard').classList.remove('flipped');
     $('#vbtns').hidden = true;
-    $('#vtag').textContent = (study.pos + 1) + ' / ' + study.words.length;
+    $('#vtag').textContent = (study.mode === 'review' ? '复习 ' : '') +
+      (study.pos + 1) + ' / ' + study.words.length;
     $('#ven').textContent = w.en;
     $('#vph').textContent = w.ph ? '/' + w.ph + '/' : '';
     $('#vzh').textContent = w.zh;
-    $('#vmeta').textContent = (w.lapses ? '记错过 ' + w.lapses + ' 次 · ' : '') + label(study.id);
+    $('#vmeta').textContent = (w.lapses ? '记错过 ' + w.lapses + ' 次 · ' : '') +
+      (study.mode === 'review' ? '第 ' + (study.round + 1) + ' 次复习' : label(study.id));
     $('#studyProgress').textContent = (study.pos + 1) + ' / ' + study.words.length;
   }
   function answer(kind) {
     if (!study.flipped) return;
     const w = study.words[study.pos];
+    if (!w) return;
     w.reps = (w.reps || 0) + 1;
+    w.last = kind;
+    if (study.mode === 'review') w.rAt = study.round;   /* 记下「这一轮考过它了」 */
     if (kind === 'yes') {
       w.learned = true;
       study.stat.yes++;
@@ -341,6 +394,12 @@
       w.lapses = (w.lapses || 0) + 1;
       study.stat.no++;
       if (window.OCFish) window.OCFish.wrong();
+      /* 复习时答错的词，本批队尾再考一次 */
+      if (study.mode === 'review' && !study.reiter[w.id]) {
+        study.reiter[w.id] = 1;
+        study.words.push(w);
+        study.end = study.words.length;
+      }
     }
     saveWords();
     study.pos++;
@@ -353,15 +412,19 @@
     const s = study.stat;
     const total = study.words.length;
     const done = study.end;
-    const more = done < total;
-    $('#vdoneTitle').textContent = more
-      ? '这一批过完了（' + done + ' / ' + total + '）'
-      : '这一课过完了';
+    const isRev = study.mode === 'review';
+    const more = !isRev && done < total;
+    $('#vdoneTitle').textContent = isRev
+      ? '本次复习考完了'
+      : (more ? '这一批过完了（' + done + ' / ' + total + '）' : '这一课过完了');
     $('#vdoneText').textContent = '认识 ' + s.yes + ' · 模糊 ' + s.fuzzy + ' · 不认识 ' + s.no +
-      (more ? '。可以先记下来，也可以继续下一批。' : '。记下来之后，明天会自动出现在复习列表里。');
+      (isRev
+        ? (s.no ? '。答错的 ' + s.no + ' 个已在队尾重考一遍。' : '。')
+        : (more ? '。可以先记下来，也可以继续下一批。' : '。记下来之后，明天会自动出现在复习列表里。'));
     $('#btnNextBatch').hidden = !more;
     $('#btnNextBatch').textContent = '继续下一批（' + (done + 1) + '–' + Math.min(done + BATCH, total) + '）';
-    $('#btnFinish').textContent = more ? '记下这一课，排复习' : '记下今天学过，排复习';
+    $('#btnFinish').textContent = isRev ? '完成本次复习，排下一次'
+      : (more ? '记下这一课，排复习' : '记下今天学过，排复习');
     $('#studyProgress').textContent = done + ' / ' + total;
   }
 
@@ -471,7 +534,7 @@
   });
   $('#btnLearn').addEventListener('click', () => {
     const nx = nextNewLesson();
-    if (nx) openStudy(nx);
+    if (nx) openStudy(nx, 'learn');
   });
   $('#btnStudyExit').addEventListener('click', closeStudy);
   $('#btnNextBatch').addEventListener('click', () => {
@@ -482,22 +545,30 @@
     showCard();
   });
   $('#btnFinish').addEventListener('click', () => {
-    markLearned(study.id);
-    const due = lessons[study.id] && lessons[study.id].due;
+    const id = study.id;
+    const isRev = study.mode === 'review';
+    let r = '';
+    if (isRev) r = reviewDone(id); else markLearned(id);
+    const due = lessons[id] && lessons[id].due;
     if (window.OCFish) {
-      window.OCFish.say('这一课记下了，' + (due ? '下次复习 ' + due : '已完成全部复习') + '。', 'combo');
+      if (r === 'same-day') {
+        window.OCFish.say('这一课今天已经复习过了，明天再来。', 'combo');
+      } else if (r === 'reset') {
+        window.OCFish.say('隔得有点久，这一课往后退了一轮，' +
+          (due ? '下次 ' + due + '。' : '已经全部复习完了。'), 'combo');
+      } else {
+        window.OCFish.say((isRev ? '复习记下了，' : '这一课记下了，') +
+          (due ? '下次复习 ' + due + '。' : '已完成全部复习。'), 'combo');
+      }
     }
     closeStudy();
   });
   $('#btnFinishSkip').addEventListener('click', closeStudy);
 
   $('#dueList').addEventListener('click', e => {
-    const b = e.target.closest('[data-done]');
+    const b = e.target.closest('[data-review]');
     if (!b) return;
-    reviewDone(b.getAttribute('data-done'));
-    renderToday();
-    renderPlan();
-    if (window.OCFish) window.OCFish.correct();
+    openStudy(b.getAttribute('data-review'), 'review');
   });
 
   $('#btnPick').addEventListener('click', () => {
@@ -533,7 +604,8 @@
     if (!b || b.disabled) return;
     const id = b.getAttribute('data-lsn');
     if (stateOf(id).key === 'empty') return;
-    openStudy(id);
+    const rec = lessons[id];
+    openStudy(id, (rec && rec.at) ? 'review' : 'learn');
   });
 
   $('#btnBulk').addEventListener('click', () => {
