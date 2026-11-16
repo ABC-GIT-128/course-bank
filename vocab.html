@@ -15,7 +15,10 @@
   <div class="hdin">
     <div class="row1">
       <div class="ttl"><a class="back" href="index.html">← 全部课程</a><b>英语四级 · 背单词</b><span class="cterm" id="vday"></span></div>
-      <div class="tools" data-fish="toggle-slot"></div>
+      <div class="tools">
+        <button class="btn plain darkbtn" id="btnDark" title="深色模式" aria-pressed="false">🌙</button>
+        <span data-fish="toggle-slot"></span>
+      </div>
     </div>
     <div class="row2">
       <div class="track"><i id="bar"></i></div>
@@ -28,9 +31,12 @@
 
   <!-- ============ 今日 ============ -->
   <section class="vtoday">
-    <div class="vthead">
-      <h2>今天</h2>
-      <span class="muted" id="todayTip"></span>
+    <div class="vhero">
+      <div class="vstreak"><b id="streakN">0</b><span>连续学习天</span></div>
+      <div class="vhero-r">
+        <h2>今天</h2>
+        <span class="muted" id="todayTip"></span>
+      </div>
     </div>
 
     <div id="dueBox">
@@ -78,7 +84,7 @@
           <div class="vtag" id="vtag">单词</div>
           <div class="ven" id="ven">—</div>
           <div class="vph" id="vph"></div>
-          <div class="vhint">点一下卡片看释义</div>
+          <div class="vhint">点一下看释义 · 空格</div>
         </div>
         <div class="vface vback">
           <div class="vtag">释义</div>
@@ -89,9 +95,9 @@
     </div>
 
     <div class="vbtns" id="vbtns" hidden>
-      <button class="vbtn bad" data-k="no">不认识<small>记一笔</small></button>
-      <button class="vbtn mid" data-k="fuzzy">模糊<small>过一遍</small></button>
-      <button class="vbtn ok" data-k="yes">认识<small>下一个</small></button>
+      <button class="vbtn bad" data-k="no">不认识<small>答错重考 · 1</small></button>
+      <button class="vbtn mid" data-k="fuzzy">模糊<small>排后些 · 2</small></button>
+      <button class="vbtn ok" data-k="yes">认识<small>过 · 3</small></button>
     </div>
 
     <div class="vdone" id="vdone" hidden>
@@ -125,6 +131,22 @@
     <summary>添加单词 <span class="muted">（内置词库外的补充）</span></summary>
     <div class="vpanel-body">
       <p class="seedinfo" id="seedInfo"></p>
+
+      <div class="aiimport">
+        <div class="aiimport-hd">
+          <b>资料转单词？让 AI 按固定格式吐出来</b>
+          <button class="btn plain" id="btnCopyPrompt">复制提示词</button>
+        </div>
+        <p class="muted">把这段提示词连同你的单词表 / 讲义 / PDF 一起发给 AI，拿到输出后粘到下面，或直接拖文件进来。</p>
+        <textarea id="aiprompt" rows="8" readonly spellcheck="false"></textarea>
+      </div>
+
+      <div class="vrow vfile">
+        <input type="file" id="fFile" accept=".txt,.md,.csv,.json" hidden>
+        <button class="btn" id="btnFile">导入文件</button>
+        <span class="muted">.txt / .md / .csv / .json，也可以直接把文件拖到下面的文本框</span>
+      </div>
+
       <label class="vlabel">批量粘贴，每行一个：<code>apple 苹果</code> 或 <code>apple,苹果</code> 或 <code>apple /ˈæpl/ 苹果</code></label>
       <textarea id="bulk" rows="6" placeholder="abandon 放弃&#10;ability /əˈbɪləti/ 能力&#10;absorb,吸收"></textarea>
       <div class="vrow">

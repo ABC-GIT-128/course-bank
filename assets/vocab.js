@@ -15,6 +15,7 @@
   const K_W = 'oc_vocab_words';
   const K_L = 'oc_vocab_lessons';
   const K_C = 'oc_vocab_cfg';
+  const K_D = 'oc_vocab_dark';
 
   const UNITS = 12;
   const PER_UNIT = 4;
@@ -39,6 +40,99 @@
   function diffDays(from, to) {
     const a = new Date(from + 'T00:00:00'), b = new Date(to + 'T00:00:00');
     return Math.round((b - a) / 86400000);
+  }
+
+  /* ---------- 连续学习天数（从今天/昨天往回数） ---------- */
+  function streak() {
+    const days = {};
+    Object.keys(lessons).forEach(id => {
+      const r = lessons[id];
+      if (!r) return;
+      if (r.at) days[r.at] = 1;
+      (r.hist || []).forEach(d => { days[d] = 1; });
+    });
+    let n = 0;
+    let d = today();
+    if (!days[d]) d = addDays(d, -1);       /* 今天还没学，允许从昨天起算 */
+    while (days[d]) { n++; d = addDays(d, -1); }
+    return n;
+  }
+
+  /* ---------- 深色模式 ---------- */
+  function applyDark(on, save) {
+    document.body.classList.toggle('dark', on);
+    const b = $('#btnDark');
+    if (b) {
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.textContent = on ? '☀️' : '🌙';
+      b.title = on ? '切换到浅色' : '切换到深色';
+    }
+    if (save) { try { localStorage.setItem(K_D, on ? '1' : '0'); } catch (e) {} }
+  }
+  (function initDark() {
+    let on;
+    try { on = localStorage.getItem(K_D); } catch (e) { on = null; }
+    if (on == null) {
+      on = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    } else {
+      on = on === '1';
+    }
+    applyDark(on, false);
+  })();
+
+  /* ---------- AI 提示词（复制后丢给 AI，按固定格式吐单词） ---------- */
+  const PROMPT_TEXT = [
+    '你是单词整理助手。请把下面我给你的单词内容（可能来自 PDF、讲义、表格或照片）整理成纯文本，每行一个单词，严格按这两种格式之一输出：',
+    '',
+    '  格式 A（有音标）：英文单词 /音标/ 中文释义',
+    '  格式 B（无音标）：英文单词 中文释义',
+    '',
+    '要求：',
+    '1. 每行只一个单词，不要序号、不要 Markdown、不要分组标题或空行解释',
+    '2. 英文在前，中文在后；词组保留空格（如 take off 起飞）',
+    '3. 多个中文释义用顿号「、」连接；没有音标就用格式 B',
+    '4. 只输出整理后的行，不要任何前言、总结或代码块标记',
+    '5. 看不清或不确定的词宁可跳过，不要瞎编',
+    '',
+    '现在开始整理以下内容：',
+    '【在这里粘贴或上传你的内容】'
+  ].join('\n');
+
+  /* ---------- 文件 → 行 ---------- */
+  function jsonToLines(data) {
+    const out = [];
+    const push = o => {
+      if (!o || typeof o !== 'object') return;
+      const en = String(o.word || o.en || '').trim();
+      const zh = String(o.meaning || o.zh || '').trim();
+      const ph = String(o.phonetic || o.ph || '').trim();
+      if (en) out.push({ en: en, zh: zh, ph: ph });
+    };
+    if (Array.isArray(data)) data.forEach(push);
+    else if (data && Array.isArray(data.units))
+      data.units.forEach(u => (u.lessons || []).forEach(l => (l.words || []).forEach(push)));
+    else if (data && Array.isArray(data.words)) data.words.forEach(push);
+    return out;
+  }
+  function importFile(f) {
+    if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      const text = String(rd.result || '');
+      let lines = [];
+      if (/\.json$/i.test(f.name)) {
+        try { lines = jsonToLines(JSON.parse(text)); }
+        catch (e) { $('#bulkHint').textContent = 'JSON 解析失败：' + e.message; return; }
+      } else {
+        lines = text.split(/\r?\n/).filter(l => l.trim());
+      }
+      if (!lines.length) { $('#bulkHint').textContent = '没有从「' + f.name + '」里解析到单词'; return; }
+      const r = addWords(lines);
+      $('#bulkHint').textContent = '从「' + f.name + '」导入 ' + r.added + ' 个' +
+        (r.dup ? '，重复 ' + r.dup : '') + (r.bad ? '，无法识别 ' + r.bad : '');
+    };
+    rd.onerror = () => { $('#bulkHint').textContent = '读取文件失败'; };
+    rd.readAsText(f, 'utf-8');
   }
 
   /* ---------- 存储 ---------- */
@@ -200,6 +294,8 @@
     $('#capTip').textContent = '自建词每课上限 ' + perLesson + ' 个 · 新课每批 ' + BATCH +
       ' 词 · 复习每轮抽考约 ' + BATCH + ' 词' +
       (SEED ? (' · 内置《' + (SEED.book || '') + '》' + (SEED.scope || '')) : '');
+    const sn = $('#streakN');
+    if (sn) sn.textContent = streak();
   }
 
   /* ---------- 今日 ---------- */
@@ -522,12 +618,71 @@
   }
 
   /* ---------- 事件 ---------- */
-  $('#vcard').addEventListener('click', () => {
+  const flip = () => {
     if (study.flipped) return;
     study.flipped = true;
     $('#vcard').classList.add('flipped');
     $('#vbtns').hidden = false;
+  };
+  $('#vcard').addEventListener('click', flip);
+
+  /* 键盘：空格翻面，1 不认识 / 2 模糊 / 3 认识 */
+  document.addEventListener('keydown', e => {
+    const st = $('#study');
+    if (!st || st.hidden) return;
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (e.key === ' ' || e.code === 'Space') { e.preventDefault(); flip(); }
+    else if (study.flipped && (e.key === '1' || e.key === '2' || e.key === '3')) {
+      e.preventDefault();
+      answer(e.key === '1' ? 'no' : e.key === '2' ? 'fuzzy' : 'yes');
+    }
   });
+
+  /* 深色模式切换 */
+  const db = $('#btnDark');
+  if (db) db.addEventListener('click', () => {
+    applyDark(!document.body.classList.contains('dark'), true);
+  });
+
+  /* AI 提示词：填充 + 一键复制 */
+  const ap = $('#aiprompt');
+  if (ap) ap.value = PROMPT_TEXT;
+  const cp = $('#btnCopyPrompt');
+  if (cp) cp.addEventListener('click', () => {
+    const txt = ap ? ap.value : PROMPT_TEXT;
+    const done = () => {
+      const old = cp.textContent;
+      cp.textContent = '已复制 ✓';
+      setTimeout(() => { cp.textContent = old; }, 1600);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(done, () => { ap.select(); document.execCommand('copy'); done(); });
+    } else if (ap) {
+      ap.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      done();
+    }
+  });
+
+  /* 文件导入 + 拖拽到文本框 */
+  const fFile = $('#fFile');
+  const btnFile = $('#btnFile');
+  if (btnFile && fFile) btnFile.addEventListener('click', () => fFile.click());
+  if (fFile) fFile.addEventListener('change', () => {
+    importFile(fFile.files && fFile.files[0]);
+    fFile.value = '';
+  });
+  const bulkEl = $('#bulk');
+  if (bulkEl) {
+    bulkEl.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); });
+    bulkEl.addEventListener('drop', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) importFile(f);
+    });
+  }
   $('#vbtns').addEventListener('click', e => {
     const b = e.target.closest('[data-k]');
     if (b) answer(b.getAttribute('data-k'));
