@@ -48,6 +48,43 @@
   let cfg = loadJSON(K_C, {});
   const perLesson = Number(cfg.perLesson) > 0 ? Number(cfg.perLesson) : 25;
 
+  /* ---------- 内置词库：按 教材 unit/lesson 落到对应课 ---------- */
+  const SEED = window.OC_VOCAB_SEED || null;
+  let seedAdded = 0;
+  function seedMerge() {
+    if (!SEED || !Array.isArray(SEED.units)) return 0;
+    const ver = SEED.version || 'v1';
+    if (cfg.seedVersion === ver) return 0;
+    const exists = {};
+    words.forEach(w => { exists[w.en.toLowerCase()] = 1; });
+    let added = 0;
+    SEED.units.forEach(u => {
+      (u.lessons || []).forEach(l => {
+        const slot = (Number(u.unit) - 1) * PER_UNIT + (Number(l.lesson) - 1);
+        if (slot < 0 || slot >= TOTAL) return;
+        (l.words || []).forEach((a, i) => {
+          const en = String(a[0] || '').trim();
+          const zh = String(a[2] || '').trim();
+          if (!en || !zh) return;
+          const key = en.toLowerCase();
+          if (exists[key]) return;
+          exists[key] = 1;
+          words.push({
+            id: 's' + u.unit + '-' + l.lesson + '-' + i,
+            en: en, zh: zh, ph: String(a[1] || '').trim(),
+            lsn: slot, reps: 0, lapses: 0, learned: false,
+            added: today(), seed: 1
+          });
+          added++;
+        });
+      });
+    });
+    cfg.seedVersion = ver;
+    try { localStorage.setItem(K_C, JSON.stringify(cfg)); } catch (e) {}
+    if (added) saveAllNow();
+    return added;
+  }
+
   const debounce = (window.OCFish && window.OCFish.debounce)
     ? window.OCFish.debounce
     : function (fn, wait) { let t; return function () { const a = arguments; clearTimeout(t); t = setTimeout(() => fn.apply(null, a), wait); }; };
@@ -88,6 +125,7 @@
       counts[next]++;
     });
   }
+  seedAdded = seedMerge();
   bucket(perLesson);
 
   function slotOf(id) {
@@ -152,7 +190,8 @@
     $('#stat').textContent = '已学 ' + learned + '/' + TOTAL + ' 课 · 今日待复习 ' + due +
       ' · 词库 ' + words.length + ' 词';
     $('#bar').style.width = Math.round(learned / TOTAL * 100) + '%';
-    $('#capTip').textContent = '每课 ' + perLesson + ' 词 · 总容量 ' + TOTAL * perLesson + ' 词';
+    $('#capTip').textContent = '自建词每课上限 ' + perLesson + ' 个' +
+      (SEED ? (' · 内置《' + (SEED.book || '') + '》' + (SEED.scope || '')) : '');
   }
 
   /* ---------- 今日 ---------- */
@@ -253,17 +292,20 @@
   }
 
   /* ---------- 学习模式 ---------- */
-  let study = { id: '', words: [], pos: 0, flipped: false, stat: { yes: 0, fuzzy: 0, no: 0 } };
+  const BATCH = 20;
+  let study = { id: '', words: [], pos: 0, end: 0, flipped: false, stat: { yes: 0, fuzzy: 0, no: 0 } };
 
   function openStudy(id) {
     const ws = wordsOf(id);
     if (!ws.length) return;
-    study = { id: id, words: ws, pos: 0, flipped: false, stat: { yes: 0, fuzzy: 0, no: 0 } };
+    study = { id: id, words: ws, pos: 0, end: Math.min(BATCH, ws.length), flipped: false,
+              stat: { yes: 0, fuzzy: 0, no: 0 } };
     $('#study').hidden = false;
     $('#vdone').hidden = true;
     $('#vcard').style.display = '';
     $('#vbtns').hidden = true;
-    $('#studyTitle').textContent = label(id) + ' · 共 ' + ws.length + ' 词';
+    $('#studyTitle').textContent = label(id) + ' · 共 ' + ws.length + ' 词' +
+      (ws.length > BATCH ? '（每批 ' + BATCH + ' 个）' : '');
     $('#study').scrollIntoView({ behavior: 'smooth', block: 'start' });
     showCard();
   }
@@ -273,7 +315,7 @@
   }
   function showCard() {
     const w = study.words[study.pos];
-    if (!w) { finishStudy(); return; }
+    if (!w || study.pos >= study.end) { finishStudy(); return; }
     study.flipped = false;
     $('#vcard').classList.remove('flipped');
     $('#vbtns').hidden = true;
@@ -302,16 +344,25 @@
     }
     saveWords();
     study.pos++;
-    if (study.pos >= study.words.length) finishStudy(); else showCard();
+    if (study.pos >= study.end) finishStudy(); else showCard();
   }
   function finishStudy() {
     $('#vcard').style.display = 'none';
     $('#vbtns').hidden = true;
     $('#vdone').hidden = false;
     const s = study.stat;
+    const total = study.words.length;
+    const done = study.end;
+    const more = done < total;
+    $('#vdoneTitle').textContent = more
+      ? '这一批过完了（' + done + ' / ' + total + '）'
+      : '这一课过完了';
     $('#vdoneText').textContent = '认识 ' + s.yes + ' · 模糊 ' + s.fuzzy + ' · 不认识 ' + s.no +
-      '。记下来之后，明天会自动出现在复习列表里。';
-    $('#studyProgress').textContent = study.words.length + ' / ' + study.words.length;
+      (more ? '。可以先记下来，也可以继续下一批。' : '。记下来之后，明天会自动出现在复习列表里。');
+    $('#btnNextBatch').hidden = !more;
+    $('#btnNextBatch').textContent = '继续下一批（' + (done + 1) + '–' + Math.min(done + BATCH, total) + '）';
+    $('#btnFinish').textContent = more ? '记下这一课，排复习' : '记下今天学过，排复习';
+    $('#studyProgress').textContent = done + ' / ' + total;
   }
 
   /* ---------- 解析一行 ---------- */
@@ -363,9 +414,14 @@
       if (exists[key]) { dup++; return; }
       exists[key] = 1;
 
-      let slot = -1;
-      for (let i = 0; i < TOTAL; i++) { if (countIn(i) < perLesson) { slot = i; break; } }
-      if (slot < 0) { over++; return; }
+      /* 优先找没满 perLesson 的课；内置词库已把课填满时，放进总词数最少的那一课 */
+      let slot = -1, lightest = 0, minN = Infinity;
+      for (let i = 0; i < TOTAL; i++) {
+        const c = countIn(i);
+        if (c < perLesson) { slot = i; break; }
+        if (c < minN) { minN = c; lightest = i; }
+      }
+      if (slot < 0) slot = lightest;
 
       words.push({
         id: 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
@@ -418,6 +474,13 @@
     if (nx) openStudy(nx);
   });
   $('#btnStudyExit').addEventListener('click', closeStudy);
+  $('#btnNextBatch').addEventListener('click', () => {
+    study.pos = study.end;
+    study.end = Math.min(study.end + BATCH, study.words.length);
+    $('#vdone').hidden = true;
+    $('#vcard').style.display = '';
+    showCard();
+  });
   $('#btnFinish').addEventListener('click', () => {
     markLearned(study.id);
     const due = lessons[study.id] && lessons[study.id].due;
@@ -531,5 +594,15 @@
   });
 
   /* ---------- 启动 ---------- */
+  (function seedInfo() {
+    const el = $('#seedInfo');
+    if (!el) return;
+    if (!SEED) { el.hidden = true; return; }
+    const n = words.filter(w => w.seed).length;
+    el.innerHTML = '已内置《' + esc(SEED.book || '') + '》' + esc(SEED.scope || '') +
+      '，共 <b>' + n + '</b> 词，已按教材的单元 / 课分好位置' +
+      (seedAdded ? '（本次新增 ' + seedAdded + ' 词）' : '') + '。';
+  })();
+
   renderAll();
 })();

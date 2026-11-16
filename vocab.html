@@ -98,6 +98,7 @@
       <div class="vdone-emoji">✅</div>
       <h3 id="vdoneTitle">这一课过完了</h3>
       <p class="muted" id="vdoneText"></p>
+      <button class="btn primary" id="btnNextBatch" hidden>继续下一批</button>
       <button class="btn primary" id="btnFinish">记下今天学过，排复习</button>
       <button class="btn plain" id="btnFinishSkip">先不记</button>
     </div>
@@ -121,8 +122,9 @@
 
   <!-- ============ 添加单词 ============ -->
   <details class="vpanel" id="panel">
-    <summary>添加单词 <span class="muted">（按顺序自动分到 48 课里）</span></summary>
+    <summary>添加单词 <span class="muted">（内置词库外的补充）</span></summary>
     <div class="vpanel-body">
+      <p class="seedinfo" id="seedInfo"></p>
       <label class="vlabel">批量粘贴，每行一个：<code>apple 苹果</code> 或 <code>apple,苹果</code> 或 <code>apple /ˈæpl/ 苹果</code></label>
       <textarea id="bulk" rows="6" placeholder="abandon 放弃&#10;ability /əˈbɪləti/ 能力&#10;absorb,吸收"></textarea>
       <div class="vrow">
@@ -141,7 +143,7 @@
       </div>
 
       <div class="vrow">
-        <span class="muted">每课单词数</span>
+        <span class="muted">自建单词每课上限</span>
         <select id="fPer" class="srcsel">
           <option value="20">20</option>
           <option value="25" selected>25</option>
@@ -168,6 +170,7 @@
 
 </main>
 
+<script src="assets/vocab-cet4.js"></script>
 <script src="assets/fish.js"></script>
 <script src="assets/vocab.js"></script>
 <script src="assets/pwa.js"></script>

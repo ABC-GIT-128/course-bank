@@ -28,6 +28,7 @@ const SHELL = [
   './assets/icon-192.png',
   './assets/icon-512.png',
   './data/courses.js',
+  './assets/vocab-cet4.js',
   './data/_status.js'
 ];
 
