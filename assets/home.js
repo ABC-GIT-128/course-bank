@@ -10,6 +10,7 @@
   /* ---------- 置顶（最多 3 门） ---------- */
   const PINS_KEY = 'oc_pins';
   const MAX_PINS = 3;
+  const VOCAB_ID = '__vocab__';   /* 背单词入口卡的虚拟 id，参与置顶排序 */
   const debounce = (window.OCFish && window.OCFish.debounce)
     ? window.OCFish.debounce
     : function (fn, wait) { let t; return function () { const a = arguments, c = this; clearTimeout(t); t = setTimeout(() => fn.apply(c, a), wait); }; };
@@ -166,7 +167,12 @@
 
     const act = items.filter(c => c.status === 'active');
     const arc = items.filter(c => c.status === 'archived');
-    let html = '<div class="grid">' + act.map(card).join('') + vocabCard() + contribCard() + '</div>';
+    const vc = vocabCard();
+    let html = '<div class="grid">' +
+      (PINS.indexOf(VOCAB_ID) >= 0 ? vc : '') +
+      act.map(card).join('') +
+      (PINS.indexOf(VOCAB_ID) < 0 ? vc : '') +
+      contribCard() + '</div>';
     if (arc.length) {
       html += '<div class="arcbar"><b>往期课程（' + arc.length + ' 门）</b>' +
         '<span>超过' + RET.keepYears + ' 年（' + RET.cutoff + ' 年之前）的课程已归档，仅作参考，可能与本学期考纲不一致</span>' +
@@ -192,13 +198,17 @@
   }
 
   function vocabCard() {
-    return '<a class="ccard ccard-vocab" href="vocab.html">' +
+    const pinned = PINS.indexOf(VOCAB_ID) >= 0;
+    return '<div class="cwrap' + (pinned ? ' is-pinned' : '') + '" data-cid="' + VOCAB_ID + '">' +
+      '<button class="pinbtn' + (pinned ? ' on' : '') + '" type="button" data-pin="' + VOCAB_ID + '"' +
+        ' aria-pressed="' + pinned + '" title="' + (pinned ? '取消置顶' : '置顶这门课') + '">📌</button>' +
+      '<a class="ccard ccard-vocab" href="vocab.html">' +
       '<div class="cchd"><h3>英语四级 · 背单词</h3><span class="term">内置 3863 词</span></div>' +
       '<p class="ccsub">12 单元 × 4 课，按遗忘曲线在第 1/3/7/14/29 天提醒复习；到点抽考一批，答错的词当批重考。</p>' +
       '<p class="ccmeta">本地存储 · 48 课 · 免登录</p>' +
       '<p class="cctypes">翻卡学习 · 曲线抽考 · 错词重考</p>' +
       '<div class="ccfoot"><span class="go">开始背 →</span></div>' +
-      '</a>';
+      '</a></div>';
   }
 
   function contribCard() {
