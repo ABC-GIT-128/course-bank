@@ -853,3 +853,15 @@ body.vocab.dark .lg-done{background:#12201a}
 body.vocab.dark .lg-wait{background:#222647}
 body.vocab.dark .lg-empty{background:#151830}
 body.vocab.dark .muted{color:#8a94b4}
+
+/* ================= 词库切换（四级/六级） ================= */
+.bookbar{display:inline-flex;gap:4px;margin-top:10px;padding:3px;background:#eef1f8;
+  border-radius:10px;border:1px solid #e6e9f2}
+.btab{padding:5px 16px;border:none;border-radius:8px;background:transparent;color:#6b7280;
+  font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;font-family:inherit}
+.btab:hover{color:#3730a3}
+.btab.on{background:#fff;color:#3730a3;box-shadow:0 1px 3px rgba(20,26,60,.14)}
+body.vocab.dark .bookbar{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.08)}
+body.vocab.dark .btab{color:#8a94b4}
+body.vocab.dark .btab:hover{color:#c7d2fe}
+body.vocab.dark .btab.on{background:#262b52;color:#a5b4fc;box-shadow:none}

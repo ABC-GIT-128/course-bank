@@ -14,11 +14,15 @@
 <header class="hd">
   <div class="hdin">
     <div class="row1">
-      <div class="ttl"><a class="back" href="index.html">← 全部课程</a><b>英语四级 · 背单词</b><span class="cterm" id="vday"></span></div>
+      <div class="ttl"><a class="back" href="index.html">← 全部课程</a><b id="vtitle">背单词</b><span class="cterm" id="vday"></span></div>
       <div class="tools">
         <button class="btn plain darkbtn" id="btnDark" title="深色模式" aria-pressed="false">🌙</button>
         <span data-fish="toggle-slot"></span>
       </div>
+    </div>
+    <div class="bookbar" id="bookBar" role="tablist">
+      <button class="btab" type="button" data-book="cet4" role="tab">四级</button>
+      <button class="btab" type="button" data-book="cet6" role="tab">六级</button>
     </div>
     <div class="row2">
       <div class="track"><i id="bar"></i></div>

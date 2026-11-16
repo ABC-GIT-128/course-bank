@@ -12,9 +12,21 @@
  * - 到期未复习会一直留在「今天」列表里，并标出逾期天数
  */
 (function () {
-  const K_W = 'oc_vocab_words';
-  const K_L = 'oc_vocab_lessons';
-  const K_C = 'oc_vocab_cfg';
+  /* ---------- 词库（book）：四级 / 六级 各自独立空间，进度互不干扰 ---------- */
+  const BOOKS = [
+    { id: 'cet4', name: '四级', suffix: '', seed: true },          /* 四级沿用无后缀 key，兼容老数据 */
+    { id: 'cet6', name: '六级', suffix: '__cet6', seed: false }   /* 六级暂无内置，纯手动导入 */
+  ];
+  const K_BOOK = 'oc_vocab_book';
+  function currentBook() {
+    let id = null;
+    try { id = localStorage.getItem(K_BOOK); } catch (e) {}
+    return BOOKS.find(b => b.id === id) || BOOKS[0];
+  }
+  const BOOK = currentBook();
+  const K_W = 'oc_vocab_words' + BOOK.suffix;
+  const K_L = 'oc_vocab_lessons' + BOOK.suffix;
+  const K_C = 'oc_vocab_cfg' + BOOK.suffix;
   const K_D = 'oc_vocab_dark';
 
   const UNITS = 12;
@@ -149,8 +161,8 @@
   let cfg = loadJSON(K_C, {});
   const perLesson = Number(cfg.perLesson) > 0 ? Number(cfg.perLesson) : 25;
 
-  /* ---------- 内置词库：按 教材 unit/lesson 落到对应课 ---------- */
-  const SEED = window.OC_VOCAB_SEED || null;
+  /* ---------- 内置词库：按 教材 unit/lesson 落到对应课（只有带内置的词库才加载） ---------- */
+  const SEED = BOOK.seed ? (window.OC_VOCAB_SEED || null) : null;
   let seedAdded = 0;
   function seedMerge() {
     if (!SEED || !Array.isArray(SEED.units)) return 0;
@@ -293,7 +305,8 @@
     $('#bar').style.width = Math.round(learned / TOTAL * 100) + '%';
     $('#capTip').textContent = '自建词每课上限 ' + perLesson + ' 个 · 新课每批 ' + BATCH +
       ' 词 · 复习每轮抽考约 ' + BATCH + ' 词' +
-      (SEED ? (' · 内置《' + (SEED.book || '') + '》' + (SEED.scope || '')) : '');
+      (SEED ? (' · 内置《' + (SEED.book || '') + '》' + (SEED.scope || ''))
+            : (BOOK.seed ? '' : ' · 暂无内置词库，用上面的方式手动导入'));
     const sn = $('#streakN');
     if (sn) sn.textContent = streak();
   }
@@ -645,6 +658,26 @@
     applyDark(!document.body.classList.contains('dark'), true);
   });
 
+  /* 词库切换：四级 / 六级（各自独立空间，切换后重载到对应词库） */
+  (function initBookBar() {
+    const title = $('#vtitle');
+    if (title) title.textContent = BOOK.name + ' · 背单词';
+    document.title = BOOK.name + ' · 背单词';
+    const bar = $('#bookBar');
+    if (!bar) return;
+    bar.querySelectorAll('[data-book]').forEach(t => {
+      t.classList.toggle('on', t.getAttribute('data-book') === BOOK.id);
+    });
+    bar.addEventListener('click', e => {
+      const b = e.target.closest('[data-book]');
+      if (!b) return;
+      const id = b.getAttribute('data-book');
+      if (id === BOOK.id) return;
+      try { localStorage.setItem(K_BOOK, id); } catch (err) {}
+      location.reload();
+    });
+  })();
+
   /* AI 提示词：填充 + 一键复制 */
   const ap = $('#aiprompt');
   if (ap) ap.value = PROMPT_TEXT;
@@ -796,7 +829,7 @@
       { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'vocab-' + today() + '.json';
+    a.download = 'vocab-' + BOOK.id + '-' + today() + '.json';
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 3000);
   });
@@ -824,7 +857,14 @@
   (function seedInfo() {
     const el = $('#seedInfo');
     if (!el) return;
-    if (!SEED) { el.hidden = true; return; }
+    if (!SEED) {
+      el.hidden = false;
+      el.innerHTML = BOOK.seed ? '' :
+        '这是「六级」词库，暂无内置词表。用上面的「导入文件」或「批量粘贴」把六级单词加进来，' +
+        '会自动分到 48 课、按遗忘曲线复习，和四级进度互不影响。';
+      if (!el.innerHTML) el.hidden = true;
+      return;
+    }
     const n = words.filter(w => w.seed).length;
     el.innerHTML = '已内置《' + esc(SEED.book || '') + '》' + esc(SEED.scope || '') +
       '，共 <b>' + n + '</b> 词，已按教材的单元 / 课分好位置' +
